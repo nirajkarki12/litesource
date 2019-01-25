@@ -1,0 +1,15 @@
+#files with potentially sensitive information
+.htaccess
+application/config/config.php
+application/config/database.php
+
+#error log
+error_log
+
+#netbeans folder
+nbproject
+#logs
+application/logs/*
+uploads/products/*
+uploads/inventory/*
+index.php

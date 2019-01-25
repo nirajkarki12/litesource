@@ -1,0 +1,366 @@
+body {
+	background: #f0f0f0;
+}
+
+#header_wrapper {
+	background: url(../img/header_bg.jpg) repeat-x;
+	height: 78px;
+}
+
+#header_content {
+	color: #fff;
+	width: 1180px !important;
+}
+
+#header_content h1 {
+	line-height: 78px !important;
+}
+
+#navigation_wrapper {
+	background: #f0f0f0 url(../img/navigation_bg.jpg) repeat-x center top;
+	height: 80px;
+	border-top: 1px solid #3d3d3d;
+	border-bottom: 2px solid #dadada;
+}
+
+#navigation {
+	height: 76px;
+	line-height: 38px;
+	position: relative; /*--Set relative positioning on the unordered list itself - not on the list item--*/
+	width: 1180px !important;
+}
+#navigation li {
+	color: #fff;
+	float: left;
+	margin: 0; padding: 0;
+	border-right: 1px solid #141414;
+	border-left: 1px solid #3d3d3d;
+}
+#navigation li a {
+	color: #fff;
+	font-weight: bold;
+	padding: 0 15px;
+	display: block;
+	text-decoration: none;
+}
+#navigation li:hover { background: url(../img/navigation_hover_bg.jpg) repeat-x; }
+#navigation li:hover a { }
+#navigation li.selected a { color: #000; }
+#navigation li.selected { background: url(../img/navigation_selected_bg.jpg) repeat-x; }
+/*--Notice the hover color is on the list item itself, not on the link. This is so it can stay highlighted even when hovering over the subnav--*/
+
+#navigation li ul {
+	height: 40px;
+	position: absolute;
+	left: 0;
+	display: none; /*--Hide by default--*/
+	width: 100%;
+}
+#navigation li ul li { border: none; }
+#navigation li ul li:hover { background: none; }
+#navigation li:hover ul { display: block; } /*--Show subnav on hover--*/
+#navigation li ul a { color:#000; font-weight: normal; display: inline; } /*--Since we declared a link style on the parent list link, we will correct it back to its original state--*/
+#navigation li ul a:hover {text-decoration: underline;}
+
+#center_wrapper {
+	clear: both;
+	margin-top: 20px;
+}
+.section_wrapper {
+	margin-bottom: 20px;
+}
+.content {
+	background: #fff;
+	padding: 20px;
+	border: 1px solid #dadada;
+	margin-bottom:20px;
+}
+.toggleLink {
+	position: absolute;
+	right: 20px;
+	top: 18px;
+}
+table {
+	width: 678px;
+	margin-bottom: 20px;
+}
+
+.product_table {
+	font-size: x-small;
+	border-spacing: 1px;
+	border-collapse: separate;
+	width: 100%;
+}
+
+.product_table tr td {
+	background-color: #DEE3E6;
+	line-height : 100%;
+	padding: 0 4px;
+	height : 20px;
+	line-height : 20px;
+	
+}
+
+.product_table td.col_price {
+    text-align: right;
+}
+
+.product_table th {
+	background: url(../img/th_bg.jpg) repeat-x;
+	height : 20px;
+	line-height : 20px;
+	padding: 0 4px;
+	text-align: left;
+}
+
+.col_amount {
+	text-align: right;
+}
+
+table tr td {
+	height : 34px;
+	line-height : 34px;
+	padding: 0 10px;
+}
+table tr td.client {
+	overflow: hidden;
+}
+table tr .first{
+	padding-left: 20px !important;
+}
+table tr .last {
+	padding-right: 20px !important;
+}
+table th {
+	background: url(../img/th_bg.jpg) repeat-x;
+	height : 34px;
+	line-height : 34px;
+	padding: 0 10px;
+	text-align: left;
+}
+.quicklinks {
+	padding-top: 0 !important;
+}
+.quicklinks li {
+		padding: 10px 0;
+		border-bottom: 1px solid #dadada;
+}
+.quicklinks li.last {
+	border: none;
+}
+.quicklinks li a {
+	font-size: 14px;
+}
+.ui-autocomplete-loading{
+    background: url('../../slick/images/ajax-loader-small.gif') !important;
+    background-repeat: no-repeat !important;
+    background-position-x: 80% !important;
+    background-position-y: 50% !important;
+}
+p.dd_intro_text{
+    padding-left: 190px;
+}
+.prodlogs {
+    max-height: 800px;
+    overflow: auto;
+}
+.addRowBelow{
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    cursor: pointer;
+}
+/*.addRowBelow img{
+    margin-left: 5px;
+    margin-top: 5px;
+}*/
+a.open-popup.help{
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    cursor: pointer;
+    text-align: center;
+    color: #000;
+	padding:1px 2px 2px 1px;
+}
+a.open-popup.help span{
+   /* margin: 5px;*/
+    display: block;
+}
+/*a.open-popup.help.green{
+    background: url(../img/messages/success.png);
+    background-repeat: no-repeat;
+    background-size: 23px;
+}
+a.open-popup.help.yellow{
+    background: url(../img/messages/info.png);
+    background-repeat: no-repeat;
+    background-size: 23px;
+}
+a.open-popup.help.red{
+    background: url(../img/messages/info.png);
+    background-repeat: no-repeat;
+    background-size: 23px;
+}*/
+
+/* Styles for dialog window */
+.small-dialog {
+	background: white;
+	padding: 20px 30px;
+	text-align: left;
+	max-width: 400px;
+	margin: 40px auto;
+	position: relative;
+}
+
+
+/**
+ * Fade-zoom animation for first dialog
+ */
+
+/* start state */
+.my-mfp-zoom-in .zoom-anim-dialog {
+	opacity: 0;
+
+	-webkit-transition: all 0.2s ease-in-out; 
+	-moz-transition: all 0.2s ease-in-out; 
+	-o-transition: all 0.2s ease-in-out; 
+	transition: all 0.2s ease-in-out; 
+
+
+
+	-webkit-transform: scale(0.8); 
+	-moz-transform: scale(0.8); 
+	-ms-transform: scale(0.8); 
+	-o-transform: scale(0.8); 
+	transform: scale(0.8); 
+}
+
+/* animate in */
+.my-mfp-zoom-in.mfp-ready .zoom-anim-dialog {
+	opacity: 1;
+
+	-webkit-transform: scale(1); 
+	-moz-transform: scale(1); 
+	-ms-transform: scale(1); 
+	-o-transform: scale(1); 
+	transform: scale(1); 
+}
+
+/* animate out */
+.my-mfp-zoom-in.mfp-removing .zoom-anim-dialog {
+	-webkit-transform: scale(0.8); 
+	-moz-transform: scale(0.8); 
+	-ms-transform: scale(0.8); 
+	-o-transform: scale(0.8); 
+	transform: scale(0.8); 
+
+	opacity: 0;
+}
+
+/* Dark overlay, start state */
+.my-mfp-zoom-in.mfp-bg {
+	opacity: 0;
+	-webkit-transition: opacity 0.3s ease-out; 
+	-moz-transition: opacity 0.3s ease-out; 
+	-o-transition: opacity 0.3s ease-out; 
+	transition: opacity 0.3s ease-out;
+}
+/* animate in */
+.my-mfp-zoom-in.mfp-ready.mfp-bg {
+	opacity: 0.8;
+}
+/* animate out */
+.my-mfp-zoom-in.mfp-removing.mfp-bg {
+	opacity: 0;
+}
+
+
+
+/**
+ * Fade-move animation for second dialog
+ */
+
+/* at start */
+.my-mfp-slide-bottom .zoom-anim-dialog {
+	opacity: 0;
+	-webkit-transition: all 0.2s ease-out;
+	-moz-transition: all 0.2s ease-out;
+	-o-transition: all 0.2s ease-out;
+	transition: all 0.2s ease-out;
+
+	-webkit-transform: translateY(-20px) perspective( 600px ) rotateX( 10deg );
+	-moz-transform: translateY(-20px) perspective( 600px ) rotateX( 10deg );
+	-ms-transform: translateY(-20px) perspective( 600px ) rotateX( 10deg );
+	-o-transform: translateY(-20px) perspective( 600px ) rotateX( 10deg );
+	transform: translateY(-20px) perspective( 600px ) rotateX( 10deg );
+
+}
+
+/* animate in */
+.my-mfp-slide-bottom.mfp-ready .zoom-anim-dialog {
+	opacity: 1;
+	-webkit-transform: translateY(0) perspective( 600px ) rotateX( 0 ); 
+	-moz-transform: translateY(0) perspective( 600px ) rotateX( 0 ); 
+	-ms-transform: translateY(0) perspective( 600px ) rotateX( 0 ); 
+	-o-transform: translateY(0) perspective( 600px ) rotateX( 0 ); 
+	transform: translateY(0) perspective( 600px ) rotateX( 0 ); 
+}
+
+/* animate out */
+.my-mfp-slide-bottom.mfp-removing .zoom-anim-dialog {
+	opacity: 0;
+
+	-webkit-transform: translateY(-10px) perspective( 600px ) rotateX( 10deg ); 
+	-moz-transform: translateY(-10px) perspective( 600px ) rotateX( 10deg ); 
+	-ms-transform: translateY(-10px) perspective( 600px ) rotateX( 10deg ); 
+	-o-transform: translateY(-10px) perspective( 600px ) rotateX( 10deg ); 
+	transform: translateY(-10px) perspective( 600px ) rotateX( 10deg ); 
+}
+
+/* Dark overlay, start state */
+.my-mfp-slide-bottom.mfp-bg {
+	opacity: 0;
+
+	-webkit-transition: opacity 0.3s ease-out; 
+	-moz-transition: opacity 0.3s ease-out; 
+	-o-transition: opacity 0.3s ease-out; 
+	transition: opacity 0.3s ease-out;
+}
+/* animate in */
+.my-mfp-slide-bottom.mfp-ready.mfp-bg {
+	opacity: 0.8;
+}
+/* animate out */
+.my-mfp-slide-bottom.mfp-removing.mfp-bg {
+	opacity: 0;
+}
+#orderGrid .slick-headerrow-column.ui-state-default {
+    padding: 5px;
+}
+.inv-detail h2, .inv-detail h3{
+    padding: 0;
+}
+.inv-detail table{
+    width: 100%;
+}
+.inv-detail table tr td{
+    border: 1px solid #ccc;
+}
+.inv-detail table thead td{
+    font-weight: bold;
+}
+.prod-link{
+    text-align: right;
+}
+.error a{
+    color: #fff;
+    text-decoration: underline;
+}
+table.normaltable tr td{
+    line-height: 18px;
+}

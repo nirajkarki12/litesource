@@ -1,0 +1,25 @@
+
+1. view->product->index
+2. view->product->product_list
+
+1. controller->products->doArchive
+
+1. models->mdl_products
+
+
+ALTER TABLE `mcb_products` ADD `is_arichved` ENUM('0','1') NOT NULL AFTER `warehouse_location`;
+
+======inventory======
+
+
+
+1. view->inventory->index
+2. view->inventory->inventory_grid
+
+1. controller->inventory->doArchive
+
+1. models->Mdl_Inventory_Item
+1. models->Mdl_Inventory_import
+
+
+ALTER TABLE `mcb_inventory_item` ADD `is_arichved` ENUM('0','1') NOT NULL AFTER `inevntory_last_changed`;

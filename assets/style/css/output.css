@@ -1,0 +1,189 @@
+body {
+	font-family: Verdana, Geneva, sans-serif;
+	font-size: 12px;
+	margin: 50px 0px 0px 0px;
+	padding-top: 0px;
+}
+
+div.header_logo {
+	float: right;
+}
+
+a {
+	text-decoration: none;
+
+}
+
+table {
+	margin-left: 50px;
+	margin-right: 50px;
+	border-spacing: 0;
+	vertical-align: top;
+	width: 100%;
+}
+
+tbody {
+	vertical-align: top;
+}
+
+table.header {
+	margin-right: 25px;
+	font-weight: lighter;	
+	
+}
+
+table.info_header {
+	width: 60%;
+	vertical-align: bottom;
+}
+
+table.info_header td.header {
+	font-size: 36px;
+	font-weight: bold;
+	text-align: left;
+
+}
+
+table.info_header td.data {
+	font-size: 32px;
+	text-align: left;
+
+}
+
+
+table.info td.header {
+	text-align: left;
+	padding: 3px;
+}
+
+table.info td.data {
+	font-weight: bold;
+	text-align: left;
+	padding: 3px;
+}
+
+table.info td.delivery_address {
+	border-radius: 2mm;
+	border: 1px solid #666666;
+	background-color: #EDF2F7;
+}
+
+table.items th.item_header {
+	border-top: 1px solid #666666;
+	border-bottom: 1px solid #666666;
+	background-color: #D3D3D3;
+}
+
+table.items td {
+	background-color: #EDF2F7;
+	border-bottom: 1px dotted #8B7958;
+	padding: 3px;
+
+}
+
+table.items td.overdue_1 {
+    background-color: #FF8811;
+    font-weight: bold;
+    text-align: right;
+}
+
+table.items td.item_type {
+	text-align: center;
+}
+
+table.items td.item_pick {
+	background-color: white;
+	border-left: 1px solid #8B7958;
+	border-right: 1px solid #8B7958;
+
+}
+
+table.items td.item_pick_none {
+	border-left: 1px solid #8B7958;
+	border-right: 1px solid #8B7958;
+
+}
+
+tr.item>td {
+	background-color: #EDF2F7;
+	border-bottom: 1px dotted #8B7958;
+	padding: 3px;
+}
+
+
+table.items td.total_owed {
+    background-color: #D3D3D3;
+    border-top: 1px solid #666666;
+    border-bottom: 1px solid #666666;
+    text-align: right;
+
+}
+
+
+table.summary {
+	text-align: right;
+	font-weight: bold;
+	border-top: 1px solid #8B7958;
+	border-bottom: 1px solid #8B7958;
+	page-break-inside: avoid;
+	xpage-break-after: always;
+}
+
+table.summary tr.divider td {
+	xborder-top: 1px solid #8B7958;
+    border-top: 1px dotted #8B7958;
+	
+}
+
+table.summary td.default_detail {
+	text-align: left;
+	font-weight: normal;
+	
+}
+
+table.summary td.default_notes {
+    text-align: left;
+    padding: 10px;
+    background-color: #FF8811;
+}
+
+span.bold {
+	font-weight: bold;
+}
+
+span.footnote_smaller {
+	font-size: 10px;
+}
+
+span.footnote_smallest {
+	font-size: 8px;
+}
+
+table.footer { 
+	margin-right: 25px;
+	vertical-align: bottom; 
+	width: 100%;
+}
+
+div.terms_conditions {
+	margin: 50px;
+}
+
+ol.terms_level_01 {
+	list-style-type: decimal;
+	line-height: 200%;
+}
+
+
+ol.terms_level_02 {
+	list-style-type: lower-alpha;
+	line-height: 110%;
+}
+
+ol.terms_level_02 li {
+	font-size: 10px;
+}
+
+ol.terms_level_03 {
+	list-style-type: lower-roman;
+}
