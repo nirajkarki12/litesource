@@ -62,6 +62,7 @@ class Lib_output {
 
         $data = $this->get_data($docket_id, $template);
 
+
         $html = $this->CI->load->view('delivery_dockets/templates/' . $data['template'], $data, TRUE);
 
         pdf_create($html, $data['filename'], TRUE);

@@ -1175,7 +1175,10 @@ class Mdl_Invoices extends MY_Model {
             return mktime(0, 0, 0, 12, 31, 9999);
         } else {
 
+// $endOfCycle=date('m-d-Y', strtotime("+50 days"));
             return mktime(0, 0, 0, date("m", $date_entered), date("d", $date_entered) + $this->mdl_mcb_data->setting('invoices_due_after'), date("Y", $date_entered));
+
+// return($endOfCycle);
         }
     }
 

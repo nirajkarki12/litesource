@@ -36,9 +36,9 @@ class Lib_output {
         
         
         
-//        echo "<pre>";
-//        print_r($data);
-//        die;
+       // echo "<pre>";
+       // print_r($data);
+       // die;
         
         $this->CI->load->helper($this->CI->mdl_mcb_data->setting('pdf_plugin'));
         // pdf_create($html, $data['filename'], TRUE);

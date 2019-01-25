@@ -723,6 +723,7 @@ class Delivery_Dockets extends Admin_Controller {
         foreach ($allDelDoc as $value) {
             $inv = $this->mdl_delivery_dockets->get_Row('mcb_invoices',array('invoice_id'=>$value->invoice_id));
             
+         
             $uDate = $value->docket_date_entered + ( 24 * 60 * 60 *30);
             $this->mdl_delivery_dockets->update('mcb_delivery_dockets', 
                     array(
