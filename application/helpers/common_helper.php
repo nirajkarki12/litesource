@@ -12,7 +12,7 @@ function span_name_length_value($name, $length, $value) {
         if (($l != '') || ($l != NULL)) {
             
             
-            if($length == '1'){
+            if($length == '-1'){
                 $name = $f . '-Per-Metre' . $l;
             }else{
                 $name = $f . '<span>' . ($length) * ($value) . '</span>' . $l;
@@ -25,8 +25,8 @@ function span_name_length_value($name, $length, $value) {
 }
 
 function mm_to_span($name, $length, $value) {
-    if (($length > 0) && ( strpos($name, '{mm}') !== FALSE )) {
-        if($length == '1'){
+    if (($length > 0 || $length == '-1') && ( strpos($name, '{mm}') !== FALSE )) {
+        if($length == '-1'){
             $name = str_replace('{mm}', '-Per-Metre', $name);
         }else{
             $name = str_replace('{mm}', '-<span>' . ($length) * ($value) . '</span>mm', $name);
@@ -38,7 +38,7 @@ function mm_to_span($name, $length, $value) {
 
 function span_to_mm($name, $length = 1, $value = 1000) {
 
-    if (($name != '') && ((float) $length > 0)) {
+    if (($name != '') && ((float) $length > 0 || $length == '-1')) {
         $name = str_replace('-Per-Metre', '{mm}', $name);
         
         if (( strpos($name, '-<span>') !== FALSE)) {

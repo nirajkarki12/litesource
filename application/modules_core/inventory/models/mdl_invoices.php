@@ -917,7 +917,7 @@ class Mdl_Invoices extends MY_Model {
             $new_price = ($item->item_length)*($item->item_per_meter);
         }
         if( ($item->item_length != '') && (strpos($new_name, '{mm}')) ){
-            if($item->item_length == '1'){
+            if($item->item_length == '-1'){
                 $new_name = str_replace('{mm}', '-Per-Metre', $new_name);
             }else{
                 $new_name = str_replace('{mm}', '-<span>'.($item->item_length)*(1000).'</span>mm', $new_name);
@@ -927,7 +927,7 @@ class Mdl_Invoices extends MY_Model {
         }
         
         if( ($item->item_length != '') && (strpos($new_description, '{mm}')) ){
-            if($item->item_length == '1'){
+            if($item->item_length == '-1'){
                 $new_description = str_replace('{mm}', '-Per-Metre', $new_description);
             }else{
                 $new_description = str_replace('{mm}', '-<span>'.($item->item_length)*(1000).'</span>mm', $new_description);

@@ -517,7 +517,7 @@ echo "var currencySymbol = '" . $CI->mdl_mcb_data->setting('currency_symbol') . 
         //console.log(value);
         var supp_id = (dataContext['supplier_id']);
 		var inv_supp = (dataContext['inv_supp']);
-        if ((dataContext['is_removed'] == 1) && (dataContext['item_qty'] != '0.00')) {
+        if ((dataContext['is_removed'] == 1) && (dataContext['item_qty'] != '0.00') && (dataContext['item_length'] != '-1')) {
             var i_invoice_item_id = dataContext.invoice_item_id;
             //var i_name =   "'"+dataContext.item_name+"'";
 

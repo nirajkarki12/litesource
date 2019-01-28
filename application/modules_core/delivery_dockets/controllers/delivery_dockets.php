@@ -490,7 +490,7 @@ class Delivery_Dockets extends Admin_Controller {
                 $inventory_item1 = $this->mdl_delivery_dockets->get_Row('mcb_inventory_item',array('inventory_id'=>$prodct_inmentry['inventory_id']));
                 if( (($inventory_item1->use_length) == '1') && ($item_length > '0')  ){
                     $quqntity = $quqntity * $item_length;
-                    if($item_length == '1'){
+                    if($item_length == '-1'){
                         $product_name = str_replace('{mm}', '-Per-Metre', $product_name);
                     }else{
                         $product_name = str_replace('{mm}', '-'.($item_length)*(1000).'mm', $product_name);
@@ -547,7 +547,7 @@ class Delivery_Dockets extends Admin_Controller {
                 $inventory_item1 = $this->mdl_delivery_dockets->get_Row('mcb_inventory_item',array('inventory_id'=>$prodct_inmentry['inventory_id']));
                 if( (($inventory_item1->use_length) == '1') && ($item_length > '0') ){
                     $quqntity = $quqntity*$item_length;
-                    if($item_length == '1'){
+                    if($item_length == '-1'){
                         $product_name = str_replace('{mm}', '-Per-Metre', $product_name);
                     }else{
                         $product_name = str_replace('{mm}', '-'.($item_length)*(1000).'mm', $product_name);

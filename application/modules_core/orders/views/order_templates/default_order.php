@@ -185,7 +185,7 @@
                         <td class="item_header" width="10%" align="right">
                             <?php if ($item->is_length == '1') { ?>
                             
-                            <?php if($item->item_length == '1'){ ?>
+                            <?php if($item->item_length == '-1'){ ?>
                             Per Metre
                             <?php }else{ ?>
                             <?php echo ($item->item_length)*1000; ?>'mm'
@@ -194,7 +194,7 @@
                         </td>
                         <td class="item_header" width="13%" align="right">
                             <?php if ($item->is_length == '1') { ?>
-                            <?php if($item->item_length == '1'){ ?>
+                            <?php if($item->item_length == '-1'){ ?>
                             Per Metre
                             <?php }else{ ?>
                             <?= ($item->item_length)*1000*($item->qty) ?>mm
