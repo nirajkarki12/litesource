@@ -1351,6 +1351,8 @@ class Mdl_Invoices extends MY_Model {
         }
     }
 
+
+
     private function calculate_due_date($date_entered, $invoice_is_quote) {
 
         if ($invoice_is_quote) {
@@ -1361,6 +1363,10 @@ class Mdl_Invoices extends MY_Model {
             return mktime(0, 0, 0, date("m", $date_entered), date("d", $date_entered) + $this->mdl_mcb_data->setting('invoices_due_after'), date("Y", $date_entered));
         }
     }
+
+    
+
+
 
     public function set_invoice_additional($invoice, $params = NULL) {
 

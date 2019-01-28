@@ -51,8 +51,25 @@
                 if (($docket->paid_status) == '1') {
                     echo "-";
                 } else {
-                    if ((round(($due_date - $current_date) / (60 * 60 * 24))) >= 1) {
-                        echo round(($due_date - $current_date) / (60 * 60 * 24)) . ' days.<br>';
+
+
+                                           
+                       // echo  "docket entry date:".date("Y-m-d",$docket_date);
+                        // echo "<br>";
+                        // // echo $docket_date;
+
+                        $due_date=date("Y-m-t",($due_date));
+                        // echo "due-date:".$due_date;
+                        // echo "<br>";
+                        // echo strtotime($due_date);
+
+                        $due_date=strtotime($due_date);
+                        // echo "<br>";
+
+
+
+                    if ((round(($due_date- $current_date) / (60 * 60 * 24))) >= 1) {
+                        echo round(($due_date - $current_date) / (60 * 60 * 24));
                     } elseif (round(($current_date - $due_date) / (60 * 60 * 24)) >= 1) {
                         if ($invoice->smart_status == '1') {
                             $fc = '<br>(Force Closed)';
@@ -64,6 +81,7 @@
                     } else {
                         echo '<p style="color:red;">Last day</p>';
                     }
+              
                 }
                 ?>
             </td>
