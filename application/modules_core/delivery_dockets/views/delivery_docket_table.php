@@ -53,51 +53,23 @@
                 } else {
 
 
-//                     $days=60*60*24;
+                                           
+                       // echo  "docket entry date:".date("Y-m-d",$docket_date);
+                        // echo "<br>";
+                        // // echo $docket_date;
 
-// echo "<br>";
-// echo round($docket_date/$days);
-// echo "<br>";
-// echo round($docket_date/($days*12*30));
-// echo "<br>";
-// echo $due_date;
-// echo "<br>";
-// echo round($due_date/$days);
-// echo "<br>";
-// echo $current_date;
-// echo "<br>";
-// echo round($current_date/$days);
-// echo "<br>";
-// $day=round(($due_date-$current_date)/(60*60*24));
-// echo $day;
+                        $due_date=date("Y-m-t",($due_date));
+                        // echo "due-date:".$due_date;
+                        // echo "<br>";
+                        // echo strtotime($due_date);
 
-//                   $remaining_date=31*60*60*24;
-// if($docket_date/(60*60*24)!=31)
-// {
-//      $due_date=($remaining_date-$docket_date)/(60*60*24)+$remaining_date;
-// }
-                   // $remaining_date=31;
-                   // if($docket_date!=$remaining_date)
-                   // {
-                   //  $due_date=($remaining_date-$docket_date)+$remaining_date;
-                   // }
-
-                   
-echo  "docket entry date:".date("Y-m-d",$docket_date);
-echo "<br>";
-echo $docket_date;
-echo "<br>";
-$due_date=date("Y-m-t",($due_date));
-echo "due-date:".$due_date;
-echo "<br>";
-echo strtotime($due_date);
-$due_date=strtotime($due_date);
-echo "<br>";
+                        $due_date=strtotime($due_date);
+                        // echo "<br>";
 
 
 
                     if ((round(($due_date- $current_date) / (60 * 60 * 24))) >= 1) {
-                        echo round(($due_date - $current_date) / (60 * 60 * 24)) . ' <p style="color:green;">days still remaning for your paytime.Sorry No Due Yet</p><br>';
+                        echo round(($due_date - $current_date) / (60 * 60 * 24));
                     } elseif (round(($current_date - $due_date) / (60 * 60 * 24)) >= 1) {
                         if ($invoice->smart_status == '1') {
                             $fc = '<br>(Force Closed)';

@@ -202,8 +202,9 @@
             
             $docket_date = date('Y-m-d',$dd->docket_date_entered);
             $date = "2015-11-17";
-            $d_d = date('Y-m-d', strtotime($docket_date. ' + 30 days'));
-            
+            $d_d = date('Y-m-t', strtotime($docket_date. ' + 30 days'));
+            // echo $d_d;          
+
             $now = time();
             //$d_d = date('d/m/Y', strtotime($docket_date. ' + 30 days'));
             
@@ -213,6 +214,7 @@
             
             $days = floor($datediff / (60 * 60 * 24));
             if($days > 0){
+              
                 echo '<p style="color:red;">'.$days.' days','</p>';
             }elseif ($days == '0') {
                 echo '<p style="color:red;">Last Day</p>';
