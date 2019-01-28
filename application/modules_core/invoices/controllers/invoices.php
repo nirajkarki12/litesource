@@ -185,7 +185,7 @@ class Invoices extends Admin_Controller {
             //The quote and invoice are being saved in same table, with multiple rows
             $data['orders'] = $this->mdl_orders->get_invoice_orders($invoice->invoice_id);
         }
-//        echo '<pre>'; print_r($data); exit;
+       // echo '<pre>'; print_r($data); exit;
         $this->load->view('invoice_edit', $data);
     }
 
