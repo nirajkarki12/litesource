@@ -1057,12 +1057,15 @@ class Mdl_Invoices extends MY_Model {
         //log_message('INFO', 'update invoice item ' . $invoice_item_id . ' (product_id:' . $product_id . ')');
 
         if ((float) $item->product_id > 0) {
-            if ((($item->product_dynamic) == '1') && (trim($item->item_length) == '')) {
+            if ((($item->product_dynamic) == '1') && (trim($item->item_length) == '') && (trim($item->item_length) != '-1')) {
                 $item->item_per_meter = $item->item_price;
                 $item->item_length = '1';
-            } else if ((($item->product_dynamic) == '1') && (trim($item->item_length) != '')) {
+            } else if ((($item->product_dynamic) == '1') && (trim($item->item_length) != '') && (trim($item->item_length) != '-1')) {
                 $item->item_price = $item->item_per_meter * $item->item_length;
-            } else {
+            } else if($item->product_dynamic == '1' && trim($item->item_length) == '-1'){
+                $item->item_per_meter = $item->item_price;
+                $item->item_length = '-1';
+            }else {
                 $item->item_per_meter = '';
                 $item->item_length = '';
             }
@@ -1074,7 +1077,7 @@ class Mdl_Invoices extends MY_Model {
 //        $item->item_length = (($item->item_length != '')?$item->item_length:(($sChk->product_dynamic == '1')?'1':''));
         //echo '<pre>'; print_r($item);
         //var_dump($item->item_length); exit;
-        if (($item->item_length != '') && ($item->item_per_meter != '0.00')) {
+        if (($item->item_length != '' && $item->item_length != '-1') && ($item->item_per_meter != '0.00')) {
             $item->item_price = ($item->item_length) * ($item->item_per_meter);
         }
         if (($item->item_length != '') && (strpos($new_name, '{mm}'))) {
