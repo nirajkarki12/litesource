@@ -1016,7 +1016,8 @@ class Mdl_Invoices extends MY_Model {
 
         $new_name = $item->item_name;
         $new_description = $item->item_description;
-
+        
+        
         if ($old_item->item_name !== $new_name) {
             if ($new_name !== '') {
                 $this->load->model('products/mdl_products');
@@ -1051,7 +1052,7 @@ class Mdl_Invoices extends MY_Model {
             }
         }
 
-
+        
 //        echo '<pre>';
 //        print_r($item);exit;
         //log_message('INFO', 'update invoice item ' . $invoice_item_id . ' (product_id:' . $product_id . ')');
@@ -1077,17 +1078,19 @@ class Mdl_Invoices extends MY_Model {
 //        $item->item_length = (($item->item_length != '')?$item->item_length:(($sChk->product_dynamic == '1')?'1':''));
         //echo '<pre>'; print_r($item);
         //var_dump($item->item_length); exit;
+        
+        
         if (($item->item_length != '' && $item->item_length != '-1') && ($item->item_per_meter != '0.00')) {
             $item->item_price = ($item->item_length) * ($item->item_per_meter);
         }
         if (($item->item_length != '') && (strpos($new_name, '{mm}'))) {
             $new_name = mm_to_span($new_name, $item->item_length, 1000);
         }
-
+        
         if (($item->item_length != '') && (strpos($new_description, '{mm}'))) {
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
-
+        
         if ($item->item_length != '') {
             $new_name = span_to_mm($new_name, $item->item_length, 1000);
             $new_name = mm_to_span($new_name, $item->item_length, 1000);
@@ -1095,7 +1098,7 @@ class Mdl_Invoices extends MY_Model {
             $new_description = span_to_mm($new_description, $item->item_length, 1000);
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
-
+        //echo '...'.$new_description; exit;
 //        var_dump($item->item_qty);
 //        echo "ggg";
 //        die;
@@ -1111,7 +1114,7 @@ class Mdl_Invoices extends MY_Model {
             $product_id = '';
         }
         
-        
+        //echo $new_description; exit;
 
         $db_set = array(
             'item_type' => $item->item_type,

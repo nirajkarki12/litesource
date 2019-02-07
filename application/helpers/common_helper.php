@@ -37,20 +37,26 @@ function mm_to_span($name, $length, $value) {
 
 
 function span_to_mm($name, $length = 1, $value = 1000) {
-
+    //echo trim($name);
     if (($name != '') && ((float) $length > 0 || $length == '-1')) {
-        $name = str_replace('-Per-Metre', '{mm}', $name);
-        
+        if (( strpos($name, '-Per-Metre') !== FALSE)) {
+            $name = str_replace('-Per-Metre', '{mm}', $name);
+        }else{
+            $name = str_replace('mm', '', $name);
+        }
         if (( strpos($name, '-<span>') !== FALSE)) {
             $w = explode('-<span>', $name);
             $f = $w[0];
             $w2 = explode('</span>', $w[1]);
             $l = $w2[1];
             if (($l != '') || ($l != NULL)) {
+                $name = $f . '{mm}'.$l;
+            }else{
                 $name = $f . '{mm}';
             }
         }
     }
+    //echo trim($name);
     return trim($name);
 }
 
