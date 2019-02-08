@@ -41,9 +41,10 @@ function span_to_mm($name, $length = 1, $value = 1000) {
     if (($name != '') && ((float) $length > 0 || $length == '-1')) {
         if (( strpos($name, '-Per-Metre') !== FALSE)) {
             $name = str_replace('-Per-Metre', '{mm}', $name);
-        }else{
+        }elseif (( strpos($name, '{mm}') == FALSE)) {
             $name = str_replace('mm', '', $name);
         }
+        
         if (( strpos($name, '-<span>') !== FALSE)) {
             $w = explode('-<span>', $name);
             $f = $w[0];

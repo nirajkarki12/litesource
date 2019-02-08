@@ -1013,8 +1013,12 @@ class Mdl_Invoices extends MY_Model {
                 return $arr;
             }
         }
+//        if (($item->item_qty != "") && ($item->item_qty != '0') && $item->item_length == '') {
+//            $item->item_length = 1;
+//        }
 
         $new_name = $item->item_name;
+        
         $new_description = $item->item_description;
         
         
@@ -1091,10 +1095,11 @@ class Mdl_Invoices extends MY_Model {
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
         
+        
         if ($item->item_length != '') {
             $new_name = span_to_mm($new_name, $item->item_length, 1000);
             $new_name = mm_to_span($new_name, $item->item_length, 1000);
-
+            
             $new_description = span_to_mm($new_description, $item->item_length, 1000);
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
