@@ -891,6 +891,7 @@ class Mdl_Invoices extends MY_Model {
         $db_array = array(
             'invoice_id' => $item->invoice_id,
             'product_id' => $item->product_id,
+            'original_name' => $item->item_name,
             'item_name' => mm_to_span($item->item_name, $item->item_length, 1000),
             'item_description' => mm_to_span($item->item_description, $item->item_length, 1000),
             'item_length' => $item->item_length,
@@ -985,7 +986,7 @@ class Mdl_Invoices extends MY_Model {
     }
 
     public function update_invoice_item($invoice_id, $item) {
-
+        $js_msg = 'undefined';
         $this->product_line = $item;
         /*
          * 31-AUG-2011
@@ -1131,12 +1132,11 @@ class Mdl_Invoices extends MY_Model {
             'item_price' => $item->item_price,
             'product_id' => $product_id,
         );
-
+        
         $this->db->where('invoice_item_id', $invoice_item_id);
         $this->db->set($db_set);
 
 
-        $r = $this->db->update('mcb_invoice_items');
 
 //        if(($db_set['item_qty'] == '0' && $db_set['product_id'] == '0' )){
 //            $r = $this->db->update('mcb_invoice_items');
@@ -1150,7 +1150,18 @@ class Mdl_Invoices extends MY_Model {
 //            $r = $this->db->update('mcb_invoice_items');
 //        } else{
 //            $r = FALSE;
-//        }        
+//        }   
+        
+        if($db_set['item_qty'] < '-1'){
+            $js_msg = 'Enter The Valid Quantity.';
+            $r = FALSE;
+        }elseif ( ($item->product_dynamic) == '1' && ($db_set['item_length'] < '-1' || $db_set['item_length'] == '0' || $db_set['item_length'] == '' )  ) {
+            $js_msg = 'Enter The Valid Product Length.';
+            $r = FALSE;
+        } else {
+            $r = $this->db->update('mcb_invoice_items');
+        }
+        
         if ($r == TRUE) {
             if (($invoice_item_id > 0) && ($new_name != "")) {
                 $check_invoice = $this->get_row('mcb_invoices', array('invoice_id' => $invoice_id));
@@ -1177,7 +1188,8 @@ class Mdl_Invoices extends MY_Model {
             //return $this->get_invoice_item($invoice_item_id);
             $arr = array(
                 'status' => FALSE,
-                'l_data' => $this->get_invoice_item($invoice_item_id)
+                'l_data' => $this->get_invoice_item($invoice_item_id),
+                'js_msg' => $js_msg
             );
             return $arr;
         }
@@ -1323,8 +1335,8 @@ class Mdl_Invoices extends MY_Model {
 
         $sql = "
 			INSERT
-              INTO mcb_invoice_items (invoice_id, product_id, item_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index)
-            SELECT ?, product_id, item_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index
+              INTO mcb_invoice_items (invoice_id, product_id, item_name, original_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index)
+            SELECT ?, product_id, item_name, original_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index
               FROM mcb_invoice_items
              WHERE invoice_id = ?" . $where;
 
