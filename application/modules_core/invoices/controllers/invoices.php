@@ -797,27 +797,6 @@ class Invoices extends Admin_Controller {
         //there must be product id to compare, we will not be using item_name, instead
         //each product has a unique product id
         $this->load->model('products/mdl_products');
-
-
-//        //if there is new product then we are going to add it
-//        if (trim($item->item_name) != '') {
-//            //checking duplication
-//            if(!$this->mdl_products->checkDuplicate_product_supplier_code($item->item_name)){
-//                $product_array = array(
-//                    'product_name' => $item->item_name,
-//                    'product_description' => $item->item_description,
-//                    'product_supplier_description' => '',
-//                    'product_supplier_code' => '',
-//                    'product_supplier_price' => $item->item_price,
-//                    'product_base_price' => $item->item_price,
-//                    'product_active' => '1',
-//                );
-//
-//                $product_id = $this->mdl_products->addNewProductFromQuote($product_array);
-//                $item->product_id = $product_id;
-//            }
-//        }
-
         $data = array(
             'item' => $this->mdl_invoices->update_invoice_item($invoice_id, $item),
             'invoice_amounts' => $this->mdl_invoices->get_invoice_amounts($invoice_id),

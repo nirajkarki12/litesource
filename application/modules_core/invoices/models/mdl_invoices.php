@@ -867,7 +867,7 @@ class Mdl_Invoices extends MY_Model {
                 $product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
                 if (isset($product)) {
                     $item->item_description = $product->product_description;
-                    $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
+                    $item->item_price = $this->discount_client_invoice_price($item->invoice_id, $product->product_base_price);
                     $item->product_id = $product->product_id;
                     $sChk = $this->get_row('mcb_products', array('product_id' => $item->product_id));
                     if (($sChk->product_dynamic) == '1') {
@@ -901,7 +901,7 @@ class Mdl_Invoices extends MY_Model {
             'item_index' => $item->item_index,
             'item_date' => time()
         );
-
+        
         $check_product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
         if ($this->db->insert('mcb_invoice_items', $db_array)) {
             //$this->db->insert('mcb_invoice_items', $db_array);
@@ -1028,13 +1028,14 @@ class Mdl_Invoices extends MY_Model {
                 $this->load->model('products/mdl_products');
                 //$product = $this->mdl_products->get_product_by_name($new_name);
                 $product = $this->get_row('mcb_products', array('product_name' => span_to_mm($new_name), 'is_arichved !=' => '1'));
-                // echo '<pre>';
-                //print_r($product);
+//                 echo '<pre>';
+//                print_r($product);
 //                exit();
                 if ($product != NULL) {
                     //log_message('INFO', 'Found product '.$product->product_name.' '.$product->product_description);
                     $new_description = $product->product_description;
                     $product_id = $product->product_id;
+                    $item->product_id = $product->product_id;
                     $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
                     $item->product_dynamic = $product->product_dynamic;
                     $msg = 'Name change for invoice item ' . $invoice_item_id . '(' . $old_item->item_name . ' -> ' . $new_name . ')';
@@ -1053,6 +1054,7 @@ class Mdl_Invoices extends MY_Model {
                     }
                 } else {
                     $product_id = '0';
+                    $item->product_id = '0';
                 }
             }
         }
