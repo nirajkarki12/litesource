@@ -1071,21 +1071,14 @@ class Mdl_Invoices extends MY_Model {
             } else if ((($item->product_dynamic) == '1') && (trim($item->item_length) != '') && (trim($item->item_length) != '-1')) {
                 $item->item_price = $item->item_per_meter * $item->item_length;
             } else if($item->product_dynamic == '1' && trim($item->item_length) == '-1'){
-                $item->item_per_meter = $item->item_price;
+                //$item->item_per_meter = $item->item_price;
+                $item->item_price = $item->item_per_meter;
                 $item->item_length = '-1';
             }else {
                 $item->item_per_meter = '';
                 $item->item_length = '';
             }
         }
-//        $sChk = $this->get_row('mcb_products', array('product_id'=>$product_id));
-//        if( (($sChk->product_dynamic) == '1') && ($item->item_length == '') ){
-//            $item->item_per_meter = $new_price;
-//        }
-//        $item->item_length = (($item->item_length != '')?$item->item_length:(($sChk->product_dynamic == '1')?'1':''));
-        //echo '<pre>'; print_r($item);
-        //var_dump($item->item_length); exit;
-        
         
         if (($item->item_length != '' && $item->item_length != '-1') && ($item->item_per_meter != '0.00')) {
             $item->item_price = ($item->item_length) * ($item->item_per_meter);
@@ -1098,7 +1091,6 @@ class Mdl_Invoices extends MY_Model {
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
         
-        
         if ($item->item_length != '') {
             $new_name = span_to_mm($new_name, $item->item_length, 1000);
             $new_name = mm_to_span($new_name, $item->item_length, 1000);
@@ -1106,6 +1098,17 @@ class Mdl_Invoices extends MY_Model {
             $new_description = span_to_mm($new_description, $item->item_length, 1000);
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
+        
+        if($item->item_qty == '-1'){
+            $new_name = '';
+            $new_description = '';
+            $item->item_length = '';
+            $item->item_per_meter = '';
+            $item->product_dynamic = '0';
+            $item->item_price = '';
+            $product_id = 0;
+        }
+        
         //echo '...'.$new_description; exit;
 //        var_dump($item->item_qty);
 //        echo "ggg";
