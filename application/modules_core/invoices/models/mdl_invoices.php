@@ -1157,7 +1157,7 @@ class Mdl_Invoices extends MY_Model {
 //            $r = FALSE;
 //        }   
         
-        if($db_set['item_qty'] < '-1'){
+        if($db_set['item_qty'] < '-1' && $db_set['item_qty'] != ''){
             $js_msg = 'Enter The Valid Quantity.';
             $r = FALSE;
         }elseif ( ($item->product_dynamic) == '1' && ($db_set['item_length'] < '-1' || $db_set['item_length'] == '0' || $db_set['item_length'] == '' )  ) {
