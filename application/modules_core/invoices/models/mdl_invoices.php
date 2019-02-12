@@ -1123,6 +1123,7 @@ class Mdl_Invoices extends MY_Model {
             $item->item_length = '';
             $item->item_price = '';
             $product_id = '';
+            $item->product_dynamic = 0;
         }
         
         //echo $new_description; exit;
@@ -1157,7 +1158,7 @@ class Mdl_Invoices extends MY_Model {
 //            $r = FALSE;
 //        }   
         
-        if($db_set['item_qty'] < '-1' && $db_set['item_qty'] != ''){
+        if($db_set['item_qty'] < '-1' && $db_set['item_qty'] != ""){
             $js_msg = 'Enter The Valid Quantity.';
             $r = FALSE;
         }elseif ( ($item->product_dynamic) == '1' && ($db_set['item_length'] < '-1' || $db_set['item_length'] == '0' || $db_set['item_length'] == '' )  ) {
@@ -1171,7 +1172,7 @@ class Mdl_Invoices extends MY_Model {
             if (($invoice_item_id > 0) && ($new_name != "")) {
                 $check_invoice = $this->get_row('mcb_invoices', array('invoice_id' => $invoice_id));
 //               if($check_invoice->invoice_is_quote == '0'){
-
+                
                 $db_inc_his = array(
                     'invoice_id' => $invoice_id,
                     'invoice_history_date' => time(),
