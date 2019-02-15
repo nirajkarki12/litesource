@@ -42,7 +42,7 @@ function span_to_mm($name, $length = 1, $value = 1000) {
         if (( strpos($name, '-Per-Metre') !== FALSE)) {
             $name = str_replace('-Per-Metre', '{mm}', $name);
         }elseif (( strpos($name, '{mm}') == FALSE)) {
-            $name = str_replace('mm', '', $name);
+            $name = str_replace('</span>mm', '</span>', $name);
         }
         
         if (( strpos($name, '-<span>') !== FALSE)) {

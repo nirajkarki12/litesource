@@ -867,7 +867,7 @@ class Mdl_Invoices extends MY_Model {
                 $product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
                 if (isset($product)) {
                     $item->item_description = $product->product_description;
-                    $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
+                    $item->item_price = $this->discount_client_invoice_price($item->invoice_id, $product->product_base_price);
                     $item->product_id = $product->product_id;
                     $sChk = $this->get_row('mcb_products', array('product_id' => $item->product_id));
                     if (($sChk->product_dynamic) == '1') {
@@ -891,6 +891,7 @@ class Mdl_Invoices extends MY_Model {
         $db_array = array(
             'invoice_id' => $item->invoice_id,
             'product_id' => $item->product_id,
+            'original_name' => $item->item_name,
             'item_name' => mm_to_span($item->item_name, $item->item_length, 1000),
             'item_description' => mm_to_span($item->item_description, $item->item_length, 1000),
             'item_length' => $item->item_length,
@@ -900,7 +901,7 @@ class Mdl_Invoices extends MY_Model {
             'item_index' => $item->item_index,
             'item_date' => time()
         );
-
+        
         $check_product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
         if ($this->db->insert('mcb_invoice_items', $db_array)) {
             //$this->db->insert('mcb_invoice_items', $db_array);
@@ -985,7 +986,7 @@ class Mdl_Invoices extends MY_Model {
     }
 
     public function update_invoice_item($invoice_id, $item) {
-
+        $js_msg = 'undefined';
         $this->product_line = $item;
         /*
          * 31-AUG-2011
@@ -1027,13 +1028,14 @@ class Mdl_Invoices extends MY_Model {
                 $this->load->model('products/mdl_products');
                 //$product = $this->mdl_products->get_product_by_name($new_name);
                 $product = $this->get_row('mcb_products', array('product_name' => span_to_mm($new_name), 'is_arichved !=' => '1'));
-                // echo '<pre>';
-                //print_r($product);
+//                 echo '<pre>';
+//                print_r($product);
 //                exit();
                 if ($product != NULL) {
                     //log_message('INFO', 'Found product '.$product->product_name.' '.$product->product_description);
                     $new_description = $product->product_description;
                     $product_id = $product->product_id;
+                    $item->product_id = $product->product_id;
                     $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
                     $item->product_dynamic = $product->product_dynamic;
                     $msg = 'Name change for invoice item ' . $invoice_item_id . '(' . $old_item->item_name . ' -> ' . $new_name . ')';
@@ -1052,6 +1054,7 @@ class Mdl_Invoices extends MY_Model {
                     }
                 } else {
                     $product_id = '0';
+                    $item->product_id = '0';
                 }
             }
         }
@@ -1068,21 +1071,14 @@ class Mdl_Invoices extends MY_Model {
             } else if ((($item->product_dynamic) == '1') && (trim($item->item_length) != '') && (trim($item->item_length) != '-1')) {
                 $item->item_price = $item->item_per_meter * $item->item_length;
             } else if($item->product_dynamic == '1' && trim($item->item_length) == '-1'){
-                $item->item_per_meter = $item->item_price;
+                //$item->item_per_meter = $item->item_price;
+                $item->item_price = $item->item_per_meter;
                 $item->item_length = '-1';
             }else {
                 $item->item_per_meter = '';
                 $item->item_length = '';
             }
         }
-//        $sChk = $this->get_row('mcb_products', array('product_id'=>$product_id));
-//        if( (($sChk->product_dynamic) == '1') && ($item->item_length == '') ){
-//            $item->item_per_meter = $new_price;
-//        }
-//        $item->item_length = (($item->item_length != '')?$item->item_length:(($sChk->product_dynamic == '1')?'1':''));
-        //echo '<pre>'; print_r($item);
-        //var_dump($item->item_length); exit;
-        
         
         if (($item->item_length != '' && $item->item_length != '-1') && ($item->item_per_meter != '0.00')) {
             $item->item_price = ($item->item_length) * ($item->item_per_meter);
@@ -1095,7 +1091,6 @@ class Mdl_Invoices extends MY_Model {
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
         
-        
         if ($item->item_length != '') {
             $new_name = span_to_mm($new_name, $item->item_length, 1000);
             $new_name = mm_to_span($new_name, $item->item_length, 1000);
@@ -1103,6 +1098,17 @@ class Mdl_Invoices extends MY_Model {
             $new_description = span_to_mm($new_description, $item->item_length, 1000);
             $new_description = mm_to_span($new_description, $item->item_length, 1000);
         }
+        
+        if($item->item_qty == '-1'){
+            $new_name = '';
+            $new_description = '';
+            $item->item_length = '';
+            $item->item_per_meter = '';
+            $item->product_dynamic = '0';
+            $item->item_price = '';
+            $product_id = 0;
+        }
+        
         //echo '...'.$new_description; exit;
 //        var_dump($item->item_qty);
 //        echo "ggg";
@@ -1117,6 +1123,7 @@ class Mdl_Invoices extends MY_Model {
             $item->item_length = '';
             $item->item_price = '';
             $product_id = '';
+            $item->product_dynamic = 0;
         }
         
         //echo $new_description; exit;
@@ -1131,12 +1138,11 @@ class Mdl_Invoices extends MY_Model {
             'item_price' => $item->item_price,
             'product_id' => $product_id,
         );
-
+        
         $this->db->where('invoice_item_id', $invoice_item_id);
         $this->db->set($db_set);
 
 
-        $r = $this->db->update('mcb_invoice_items');
 
 //        if(($db_set['item_qty'] == '0' && $db_set['product_id'] == '0' )){
 //            $r = $this->db->update('mcb_invoice_items');
@@ -1150,12 +1156,23 @@ class Mdl_Invoices extends MY_Model {
 //            $r = $this->db->update('mcb_invoice_items');
 //        } else{
 //            $r = FALSE;
-//        }        
+//        }   
+        
+        if($db_set['item_qty'] < '-1' && $db_set['item_qty'] != ""){
+            $js_msg = 'Enter The Valid Quantity.';
+            $r = FALSE;
+        }elseif ( ($item->product_dynamic) == '1' && ($db_set['item_length'] < '-1' || $db_set['item_length'] == '0' || $db_set['item_length'] == '' )  ) {
+            $js_msg = 'Enter The Valid Product Length.';
+            $r = FALSE;
+        } else {
+            $r = $this->db->update('mcb_invoice_items');
+        }
+        
         if ($r == TRUE) {
             if (($invoice_item_id > 0) && ($new_name != "")) {
                 $check_invoice = $this->get_row('mcb_invoices', array('invoice_id' => $invoice_id));
 //               if($check_invoice->invoice_is_quote == '0'){
-
+                
                 $db_inc_his = array(
                     'invoice_id' => $invoice_id,
                     'invoice_history_date' => time(),
@@ -1177,7 +1194,8 @@ class Mdl_Invoices extends MY_Model {
             //return $this->get_invoice_item($invoice_item_id);
             $arr = array(
                 'status' => FALSE,
-                'l_data' => $this->get_invoice_item($invoice_item_id)
+                'l_data' => $this->get_invoice_item($invoice_item_id),
+                'js_msg' => $js_msg
             );
             return $arr;
         }
@@ -1323,8 +1341,8 @@ class Mdl_Invoices extends MY_Model {
 
         $sql = "
 			INSERT
-              INTO mcb_invoice_items (invoice_id, product_id, item_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index)
-            SELECT ?, product_id, item_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index
+              INTO mcb_invoice_items (invoice_id, product_id, item_name, original_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index)
+            SELECT ?, product_id, item_name, original_name, item_length, item_type, item_description, item_per_meter, item_qty, item_price, item_index
               FROM mcb_invoice_items
              WHERE invoice_id = ?" . $where;
 

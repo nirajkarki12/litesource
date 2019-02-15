@@ -1001,7 +1001,11 @@ echo "var currencySymbol = '" . $CI->mdl_mcb_data->setting('currency_symbol') . 
                 dataView.updateItem(item.invoice_item_id, data.item.l_data);
                 display_invoice_amounts(data.invoice_amounts);
                 if (data.item.status == false) {
-                    alert('Something went wrong..');
+                    if(data.item.js_msg != 'undefined'){
+                        alert(data.item.js_msg);
+                    }else{
+                        alert('Something went wrong..');
+                    }
                 }
             }
         }, "json");
