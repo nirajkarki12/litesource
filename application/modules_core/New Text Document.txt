@@ -1,1 +1,0 @@
-ALTER TABLE `mcb_delivery_dockets` ADD `docket_delivery_status` ENUM('0','1') NOT NULL AFTER `invoice_sent`;
