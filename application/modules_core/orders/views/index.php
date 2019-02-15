@@ -1,5 +1,4 @@
 <?php $this->load->view('dashboard/header'); ?>
-
 <?php echo modules::run('orders/order_widgets/generate_dialog'); ?>
 
 <div class="grid_12" id="content_wrapper">
