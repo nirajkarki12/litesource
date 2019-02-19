@@ -1104,8 +1104,18 @@ class Mdl_Invoices extends MY_Model {
         }
         
         if($item->item_qty == '-1'){
+            if(strpos($new_description, 'Subtotal') !== FALSE){
+                $new_description = $new_description;
+            }else{
+                $new_description = 'Subtotal:';
+            }
+        }
+//        echo '<pre>';
+//        print_r($new_description);
+//        die;
+        if($item->item_qty == '-1'){
             $new_name = '';
-            $new_description = 'Subtotal:';
+            $new_description = $new_description;
             $item->item_length = '';
             $item->item_type = '';
             $item->item_per_meter = '';
@@ -1115,7 +1125,7 @@ class Mdl_Invoices extends MY_Model {
         }
         
         //echo '...'.$new_description; exit;
-//        var_dump($item->item_qty);
+//        var_dump($item);
 //        echo "ggg";
 //        die;
         // ------- to make row clean--------------
