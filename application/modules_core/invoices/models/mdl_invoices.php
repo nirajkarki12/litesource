@@ -902,6 +902,10 @@ class Mdl_Invoices extends MY_Model {
             'item_date' => time()
         );
         
+        if($db_array['item_qty'] == '-1'){
+            $db_array['item_description'] = 'Subtotal:';
+        }
+        
         $check_product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
         if ($this->db->insert('mcb_invoice_items', $db_array)) {
             //$this->db->insert('mcb_invoice_items', $db_array);
@@ -1101,8 +1105,9 @@ class Mdl_Invoices extends MY_Model {
         
         if($item->item_qty == '-1'){
             $new_name = '';
-            $new_description = '';
+            $new_description = 'Subtotal:';
             $item->item_length = '';
+            $item->item_type = '';
             $item->item_per_meter = '';
             $item->product_dynamic = '0';
             $item->item_price = '';
