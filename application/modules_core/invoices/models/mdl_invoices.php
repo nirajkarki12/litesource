@@ -1107,6 +1107,7 @@ class Mdl_Invoices extends MY_Model {
             $new_name = '';
             $new_description = 'Subtotal:';
             $item->item_length = '';
+            $item->item_type = '';
             $item->item_per_meter = '';
             $item->product_dynamic = '0';
             $item->item_price = '';
