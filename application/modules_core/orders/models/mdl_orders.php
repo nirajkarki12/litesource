@@ -112,12 +112,12 @@ class Mdl_Orders extends MY_Model {
     }
 
     public function get($params = NULL) {
-
+        
         if (isset($params['where']['mcb_orders.order_id'])) {
             $order_id = $params['where']['mcb_orders.order_id'];
             $orderDetail = $this->get_Row('mcb_orders', array('order_id' => $order_id));
         }
-
+        
         if ($orderDetail->is_inventory_supplier == '1' && isset($params['where']['mcb_orders.order_id'])) {
             $sql = "SELECT SQL_CALC_FOUND_ROWS mcb_orders.*, IFNULL(length(mcb_orders.order_notes), 0) "
                     . "order_has_notes, con.contact_name, con.email_address AS contact_email_address, "
@@ -138,36 +138,31 @@ class Mdl_Orders extends MY_Model {
                     . "prj.project_id = mcb_orders.project_id LEFT JOIN mcb_tax_rates AS t ON t.tax_rate_id = mcb_orders.order_tax_rate_id "
                     . "JOIN mcb_currencies ON mcb_currencies.currency_id = mcb_clients.client_currency_id WHERE `mcb_orders`.`order_id` = '" . $params['where']['mcb_orders.order_id'] . "' "
                     . "ORDER BY FROM_UNIXTIME(mcb_orders.order_date_entered) DESC, mcb_orders.order_number DESC";
-
             $q = $this->db->query($sql);
             $orders = $q->row();
-
-//            echo "<pre>";
-//            print_r($orders);
-//            die;
-
+            if($orders->custom_user_id > 0){
+                $order = $this->get_Row('mcb_users', array('user_id'=>$orders->custom_user_id));
+                $orders->from_first_name = $order->first_name;
+                $orders->from_last_name = $order->last_name;
+                $orders->from_email_address = $order->email_address;
+            }
             if ($orders->order_sub_total == '') {
 //                $orders = parent::get($params);
 //                $orders->is_pro_inv = TRUE;
             }
         } else {
-
             //$params['group_by'] = 'mcb_orders.order_id';
             //$params['debug'] = TRUE;
             $orders = parent::get($params);
         }
         return $orders;
     }
-
     /*
      * Sometimes we want raw data without joining to other tables
      */
-
     public function get_raw($limit = NULL, $offset = NULL) {
-
 //        $limit = 50;
 //        $offset = 50;
-
         $fin = array();
         if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
             //ia.invoice_total as total,
@@ -361,8 +356,9 @@ class Mdl_Orders extends MY_Model {
 
         // Can only save details if order is open
         //if ($order->order_status_type == 1) {
-
+        
         $db_array = array(
+            'custom_user_id' => $this->input->post('custom_user_id'),
             'contact_id' => $this->input->post('contact_id'),
             'project_id' => $this->input->post('project_id'),
             'order_number' => $this->input->post('order_number'),

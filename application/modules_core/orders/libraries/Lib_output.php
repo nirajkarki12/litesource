@@ -12,26 +12,26 @@ class Lib_output {
         $this->CI->load->model('users/mdl_users');
         //$this->CI->load->model('orders/mdl_orders');
     }
-
+    
     function get_pdf_filename($order) {
-
+        
         return $this->CI->lang->line('order') . '_' . $order->order_number;
     }
-
+    
     function get_data($order_id, $template) {
-
+        
         $params = array(
             'where' => array(
                 'mcb_orders.order_id' => $order_id
             )
         );
         $order = $this->CI->mdl_orders->get($params);
-
+        
         if (!$template) {
             $template = $this->CI->mdl_mcb_data->setting('default_order_template');
         }
         $info_user_id = $this->CI->mdl_mcb_data->setting('default_pdf_info_user_id');
-
+        
         $data = array(
             'order' => $order,
             'order_items' => $this->CI->mdl_orders->get_order_items_list($order_id),
@@ -42,7 +42,7 @@ class Lib_output {
         );
         return $data;
     }
-
+    
     function html($order_id, $template) {
         $data = $this->get_data($order_id, $template);
         $this->CI->load->view('orders/order_templates/' . $data['order_template'], $data);

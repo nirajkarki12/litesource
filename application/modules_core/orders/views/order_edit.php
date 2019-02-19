@@ -59,9 +59,6 @@
                         <li><a href="#tab_items"><?php echo $this->lang->line('items'); ?></a></li>
                         <li><a href="#tab_delivery"><?php echo $this->lang->line('delivery'); ?></a></li>
                         <li><a href="#tab_history"><?php echo $this->lang->line('history'); ?></a></li>
-                        
-                        
-
                     </ul>
                     <div id="tab_general">
                         <?php $this->load->view('tab_general'); ?>
