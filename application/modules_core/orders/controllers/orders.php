@@ -107,14 +107,14 @@ class Orders extends Admin_Controller {
             'order_products_missing_inv' => $this->mdl_orders->order_products_missing_inv($order_id),
             'is_mixed_inv_length' => $this->mdl_orders->getOrderMixedInventoryLengthStatus($order_id),
             //'order_inventory_null' => $this->mdl_orders->order_inventory_null($order_id),
+            'user_list' => $this->common_model->get_all_as_object('mcb_users')
         );
 //        echo "<pre>";
 //        print_r($data);
 //        die();
-        
         $this->load->view('order_edit', $data);
     }
-
+    
     function create() {
 
         if ($this->input->post('btn_cancel')) {
@@ -213,50 +213,41 @@ class Orders extends Admin_Controller {
     }
 
     function _post_handler() {
-
+        
         if ($this->input->post('btn_add_order')) {
-
+            
             redirect('orders/create');
         } elseif ($this->input->post('btn_cancel')) {
-
+            
             redirect($this->session->userdata('last_index'));
         } elseif ($this->input->post('btn_submit_options_general')) {
-
+            
             $this->session->set_flashdata('tab_index', 0);
-
             $this->mdl_orders->save();
-
             redirect('orders/edit/order_id/' . uri_assoc('order_id'));
         } elseif ($this->input->post('btn_add_order_item')) {
-
+            
             $this->session->set_flashdata('tab_index', 1);
-
             redirect('orders/order_items/form/order_id/' . uri_assoc('order_id'));
         } elseif ($this->input->post('btn_delivery_address')) {
-
+            
             $this->session->set_flashdata('tab_index', 2);
-
             redirect('addresses/form/order_id/' . uri_assoc('order_id'));
         } elseif ($this->input->post('btn_stock_in')) {
-
+            
             $this->session->set_flashdata('tab_index', 3);
-
             redirect('orders/order_items/showstock/order_id/' . uri_assoc('order_id'));
         } elseif ($this->input->post('btn_stock_out')) {
-
+            
             $this->session->set_flashdata('tab_index', 4);
-
             redirect('orders/order_items/showstockout/order_id/' . uri_assoc('order_id'));
         } elseif ($this->input->post('btn_download_pdf')) {
-
-
+            
             $download_url = 'orders/generate_pdf/order_id/' . uri_assoc('order_id');
-
             redirect($download_url);
         } elseif ($this->input->post('btn_send_email')) {
-
+            
             $email_url = 'mailer/order_mailer/form/order_id/' . uri_assoc('order_id');
-
             redirect($email_url);
         }
     }
