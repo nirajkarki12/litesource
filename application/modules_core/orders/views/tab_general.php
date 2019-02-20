@@ -26,6 +26,16 @@
             </select>
         </dd>
     </dl>
+    <dl>
+        <dt><label>User: </label></dt>		
+        <dd>
+            <select name="custom_user_id" id="custom_user_id" style="width:240px">
+                <?php foreach ($user_list as $user) { ?>
+                    <option value="<?= $user->user_id?>" <?php if($order->custom_user_id > 0){$order->user_id = $order->custom_user_id;} if($order->user_id == $user->user_id){echo 'selected';} ?> ><?=$user->first_name.' ('.$user->email_address.')'?></option>
+                <?php } ?>
+            </select>
+        </dd>
+    </dl>
     <?php if (isset($order->invoice_id)) { ?>
         <dl>
             <dt><label><?php echo $this->lang->line('quote'); ?>: </label></dt>		
@@ -86,16 +96,7 @@
             <a href="javascript:void(0)" class="order_output_link" id="<?php echo $order->order_id; ?>"><?php echo $this->lang->line('generate'); ?></a>
         </dd>
     </dl>
-    <dl>
-        <dt><label>Choose Contact: </label></dt>		
-        <dd>
-            <select name="custom_user_id" id="custom_user_id" style="width:240px">
-                <?php foreach ($user_list as $user) { ?>
-                    <option value="<?= $user->user_id?>" <?php if($order->custom_user_id > 0){$order->user_id = $order->custom_user_id;} if($order->user_id == $user->user_id){echo 'selected';} ?> ><?=$user->first_name.' ('.$user->email_address.')'?></option>
-                <?php } ?>
-            </select>
-        </dd>
-    </dl>
+    
     <input type="submit" id="btn_submit" name="btn_submit_options_general" value="<?php echo $this->lang->line('save_options'); ?>" />
 </div>
 <div style="clear: both;">&nbsp;</div>
