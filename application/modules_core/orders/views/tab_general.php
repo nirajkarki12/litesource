@@ -31,7 +31,7 @@
         <dd>
             <select name="custom_user_id" id="custom_user_id" style="width:240px">
                 <?php foreach ($user_list as $user) { ?>
-                    <option value="<?= $user->user_id?>" <?php if($order->custom_user_id > 0){$order->user_id = $order->custom_user_id;} if($order->user_id == $user->user_id){echo 'selected';} ?> ><?=$user->first_name.' ('.$user->email_address.')'?></option>
+                    <option value="<?= $user->user_id?>" <?php if($order->custom_user_id > 0){$order->user_id = $order->custom_user_id;} if($order->user_id == $user->user_id){echo 'selected';} ?> ><?=$user->first_name.' '.$user->last_name; ?></option>
                 <?php } ?>
             </select>
         </dd>
