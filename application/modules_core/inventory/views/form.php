@@ -249,7 +249,11 @@
             <?php } ?>
             <input type="hidden" id="action_type" name="action_type" value="save"/>
             <input type="submit" id="btn_submit" name="btn_submit" value="Save" />&nbsp;&nbsp;&nbsp;
-            <input type="submit" id="btn_save_continue" name="btn_save_continue" value="Save and Continue" />&nbsp;&nbsp;&nbsp;
+			
+			<?php if ($this->mdl_inventory_item->form_value('inventory_id') > '0') {
+				echo '<input type="submit" id="btn_save_continue" name="btn_save_continue" value="Save and Continue" />&nbsp;&nbsp;&nbsp;';
+			} ?>
+			
             <button type="reset" id="btn_cancel" name="btn_cancel" value="Cancel">Cancel</button>
         </div>
         </form>
