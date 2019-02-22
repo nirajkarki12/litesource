@@ -991,6 +991,7 @@ class Mdl_Invoices extends MY_Model {
 
     public function update_invoice_item($invoice_id, $item) {
         $js_msg = 'undefined';
+        $post_item = $item;
         $this->product_line = $item;
         /*
          * 31-AUG-2011
@@ -1205,7 +1206,8 @@ class Mdl_Invoices extends MY_Model {
             );
             return $arr;
         } else {
-            $this->update_invoice_amounts($invoice_id);
+            $this->common_model->get_row('mcb_invoice_items', array('invoice_item_id'=>$item->invoice_item_id));
+//            $this->update_invoice_amounts($invoice_id);
             //return $this->get_invoice_item($invoice_item_id);
             $arr = array(
                 'status' => FALSE,
