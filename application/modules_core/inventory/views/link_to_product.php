@@ -136,6 +136,7 @@
             
             <div class="filterarea">
                 <input type="button" name="applyinventorytoprod" id="applyinventorytoprod" value="Apply" />
+                <input type="button" name="delinventorytoprod" id="remove-inventory-product-relation" value="clear link" />
             </div>
             <div class="row" style="margin-top: 30px;">
                 <div class="col-md-6 link_inventory_grid">
@@ -378,6 +379,211 @@
             
         });
 
+    });
+    function inArray(needle, haystack) {
+        var length = haystack.length;
+        for(var i = 0; i < length; i++) {
+            if(haystack[i] == needle) return true;
+        }
+        return false;
+    }
+    
+    $(document).ready(function () {
+        $("#remove-inventory-product-relation").on('click', function () {
+//            $(this).attr('disabled', 'disabled');
+            var productslist_id = [];
+            var selectedRows = [];
+            for(var m = 0; m < selectedPds.length; m++){
+                if(!inArray(selectedPds[m],selectedRows)){
+                    selectedRows.push(selectedPds[m]);
+                }
+            }
+            for (var k = 0; k < selectedRows.length; k++) {
+                var data = dataView2.getItemById(selectedRows[k]);
+                if (typeof data != 'undefined') {
+                    var tinv = {};
+                    tinv['id'] = data.id;
+                    productslist_id.push(tinv);
+                }
+            }
+            
+            var invlist = [];
+            for(var m = 0; m<selectedInvs.length; m++){
+                if(!inArray(selectedInvs[m],invlist)){
+                    invlist.push(selectedInvs[m]);
+                }
+            }
+            var invlistdetail = [];
+            for (var i = 0; i < invlist.length; i++) {
+                var tinv = {};
+                var d = dataView.getItemById(invlist[i]);
+                tinv['id'] = d['id'];
+                tinv['qty'] = d['qty'];
+                invlistdetail.push(tinv);
+            }
+            
+            if((invlist.length == 0) && (productslist_id.length == 0)){
+                alert('Please select item.');
+                $(this).removeAttr('disabled');
+            }
+            
+            if(invlist.length > 0){
+                $('.inventoryGridwrap .loader').addClass('loading');
+                $('.mygridwrap .loader').addClass('loading');
+                $.ajax({
+                    type: 'post',
+                    url: "<?php echo site_url('inventory/delinkproductinventoryinv'); ?>",
+                    dataType: 'html',
+                    data: {id: invlistdetail},
+                    success: function (data) {
+                       window.location.reload();
+                    },
+                    error: function () {
+                        alert('could not get data');
+                    }
+                });
+            }
+            if(productslist_id.length>0){
+                $('.inventoryGridwrap .loader').addClass('loading');
+                $('.mygridwrap .loader').addClass('loading');
+                $.ajax({
+                    type: 'post',
+                    url: "<?php echo site_url('inventory/delinkproductinventorypro'); ?>",
+                    dataType: 'html',
+                    data: {pd: productslist_id},
+                    success: function (data) {
+                       window.location.reload();
+                    },
+                    error: function () {
+                        alert('could not get data');
+                    }
+                });  
+            }
+        });
+        $('#showunlinedinventory').on('click', function () {
+            $('.inventoryGridwrap .loader').addClass('loading');
+            if ($(this).prop('checked') == true) {
+                $.ajax({
+                    url: "<?php echo site_url('inventory/get_unlinked_inventory_list'); ?>",
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function (data) {
+                        if (data == 'session_expired') {
+                            window.location.reload();
+                        }
+                        dataView.beginUpdate();
+                        suppliers = data.suppliers;
+                        // Update supplier indexiig
+                        for (var i = 0, l = suppliers.length; i < l; i++) {
+                            var id = suppliers[i]['supplier_id'];
+                            suppliersById[id] = i;
+                        }
+                        
+                        var inventoryItems = data.inventory;
+                        for (var i = 0, l = inventoryItems.length; i < l; i++) {
+                            updateInventoryDetails(inventoryItems[i]);
+                        }
+                        dataView.setItems(inventoryItems, 'id');
+                        dataView.setFilter(filter);
+                        //dataView.sort(comparer, sortDir);
+                        dataView.endUpdate();
+                        $('.inventoryGridwrap .loader').removeClass('loading');
+                    }
+                });
+            } else {
+                $.ajax({
+                    url: "<?php echo site_url('inventory/get_inventory_list'); ?>",
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function (data) {
+                        if (data == 'session_expired') {
+                            window.location.reload();
+                        }
+                        dataView.beginUpdate();
+                        suppliers = data.suppliers;
+                        // Update supplier indexiig
+                        for (var i = 0, l = suppliers.length; i < l; i++) {
+                            var id = suppliers[i]['supplier_id'];
+                            suppliersById[id] = i;
+                        }
+                        var inventoryItems = data.inventory;
+                        for (var i = 0, l = inventoryItems.length; i < l; i++) {
+                            updateInventoryDetails(inventoryItems[i]);
+                        }
+                        dataView.setItems(inventoryItems, 'id');
+                        dataView.setFilter(filter);
+                        //dataView.sort(comparer, sortDir);
+                        dataView.endUpdate();
+                        $('.inventoryGridwrap .loader').removeClass('loading');
+                    }
+                });
+            }
+        });
+        $('#showunlinedproducts').on('click', function () {
+            $('.mygridwrap .loader').addClass('loading');
+            if ($(this).prop('checked') == true) {
+                $.ajax({
+                    type: 'POST',
+                    url: "<?php echo site_url('products/getUnlinkedProducts'); ?>",
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data == 'session_expired') {
+                            window.location.reload();
+                        }
+                        var products = data.products;
+
+                        dataView2.setItems(products, 'id');
+                        dataView2.setFilter(filter2);
+                        $('.mygridwrap .loader').removeClass('loading');
+                    }
+                });
+            } else {
+                $.post("<?php echo site_url('products/get_products_JSON_link'); ?>", {
+                }, function (data) {
+                    if (data == 'session_expired') {
+                        window.location.reload();
+                    }
+                    var products = data.products;
+
+                    dataView2.setItems(products, 'id');
+                    dataView2.setFilter(filter2);
+                    $('.mygridwrap .loader').removeClass('loading');
+                }, "json");
+            }
+        });
+        $(document).on('click', '.open-popup', function (e) {
+            var el = $(this);
+            e.preventDefault();
+            var url = $(this).attr('href');
+            $.magnificPopup.open({
+                items: {
+                    src: '<div class="small-dialog" style="text-align:center;"><img src="<?php echo base_url().'assets/style/img/loading.gif'; ?>" /></div>', // can be a HTML string, jQuery object, or CSS selector
+                    type: 'inline',
+                    fixedContentPos: false,
+                    fixedBgPos: true,
+                    overflowY: 'auto',
+                    closeBtnInside: true,
+                    preloader: false,
+                    midClick: true,
+                    removalDelay: 300,
+                    mainClass: 'my-mfp-zoom-in'
+                },
+                callbacks: {
+                    beforeOpen: function () {
+                        this.st.mainClass = el.attr('data-effect');
+                    }
+                },
+            });
+            $.ajax({
+                type: 'POST',
+                url: url,
+                data: {name: el.data('name')},
+                dataType: 'html',
+                success: function (data) {
+                    $('.small-dialog').html(data);
+                }
+            }); 
+        });
     });
     function inArray(needle, haystack) {
         var length = haystack.length;

@@ -363,7 +363,7 @@ ORDER BY supplier_name, product_name";
                 . "(SELECT COUNT(*) FROM `mcb_products_inventory` WHERE mcb_products_inventory.product_id = mii.inventory_id) AS inventorycount "
                 . "FROM `mcb_inventory_item` AS mii "
                 . "left JOIN mcb_clients ON mcb_clients.client_id = mii.supplier_id "
-                . "WHERE `inventory_type` = '1'";
+                . "WHERE `mii`.`inventory_type` = '1' AND `mii`.`is_arichved` != '1'";
         
         $q = $this->db->query($sql);
 //        echo $this->db->last_query();;

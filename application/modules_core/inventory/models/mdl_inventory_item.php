@@ -592,9 +592,8 @@ class Mdl_Inventory_Item extends MY_Model {
         }
         return FALSE;
     }
-    
+    /*update the inventory and the product relation(link)*/
     public function updateinvprodrelation($invlistdetail, $prodlistdetail) {
-
         if ($this->input->get('type') == 'one') {
             if (sizeof($invlistdetail) > 0) {
                 foreach ($invlistdetail as $inventory) {
@@ -604,7 +603,6 @@ class Mdl_Inventory_Item extends MY_Model {
                 }
             }
         } else {
-
             if (sizeof($invlistdetail) > 0) {
                 foreach ($invlistdetail as $inventory) {
 
@@ -779,7 +777,27 @@ class Mdl_Inventory_Item extends MY_Model {
         return $this->db->query($sql)->result();
     }
     
-    
+    //inventory
+    public function updateinvprodrelation1inv($invlistdetail) {
+        foreach ($invlistdetail as $inventory) {
+            $succ = $this->db->delete('mcb_products_inventory_raw', array('inventory_id' => $inventory['id']));
+        }
+        if ($succ == FALSE)
+            return FALSE;
+        else
+            return TRUE;
+    }
+    //product
+    public function updateinvprodrelation1pro($prodlistdetail) {
+        foreach ($prodlistdetail as $product) {
+            $succ = $this->db->delete('mcb_products_inventory_raw', array('product_id' => $product['id']));
+        }
+        if ($succ == FALSE)
+            return FALSE;
+        else
+            return TRUE;
+    }
+
 }
 
 ?>

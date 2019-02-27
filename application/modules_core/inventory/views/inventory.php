@@ -211,6 +211,10 @@ class Inventory extends Admin_Controller {
         $this->load->view('link_to_product');
     }
     
+    public function product_inventory_relation() {
+        $this->load->view('product_inventory_relation');
+    }
+    
     public function one_to_one_product_inv(){
         $this->load->view('one_to_one_product_inv');
     }

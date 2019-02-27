@@ -789,9 +789,7 @@ class Invoices extends Admin_Controller {
     }
 
     function updateInvoiceItem() {
-
         $this->load->model("inventory/mdl_inventory_item");
-
         $invoice_id = $this->input->post('invoice_id');
         $item = json_decode($this->input->post('item'));
         //there must be product id to compare, we will not be using item_name, instead
@@ -802,7 +800,9 @@ class Invoices extends Admin_Controller {
             'invoice_amounts' => $this->mdl_invoices->get_invoice_amounts($invoice_id),
                 //'invoice_item_amounts'	=> $this->mdl_invoices->get_invoice_item_amounts($item->invoice_item_id),
         );
-
+        //to update delivery docket amount
+        $this->load->model("delivery_dockets/mdl_delivery_dockets");
+        $this->mdl_delivery_dockets->updatedocket1($data);
         echo json_encode($data);
     }
 
@@ -824,7 +824,6 @@ class Invoices extends Admin_Controller {
     }
 
     function deleteInvoiceItem($invoice_id, $invoice_item_id) {
-
         return $this->mdl_invoices->delete_invoice_item($invoice_id, $invoice_item_id);
     }
 
@@ -832,29 +831,21 @@ class Invoices extends Admin_Controller {
 
         $invoice_id = $this->input->post('invoice_id');
         $sort_order = $this->input->post('sort_order');
-
         $this->mdl_invoices->set_invoice_items_sort_order($invoice_id, $sort_order);
         //echo json_encode($this->mdl_invoices->get_invoice_items($invoice_id));
     }
 
     function generate_pdf() {
-
         $invoice_id = uri_assoc('invoice_id');
-
         $this->mdl_invoices->save_invoice_history($invoice_id, $this->session->userdata('user_id'), $this->lang->line('generated_invoice_pdf'));
-
         $this->load->library('lib_output');
         $this->lib_output->pdf($invoice_id, uri_assoc('invoice_template'));
     }
 
     function generate_html() {
-
         $invoice_id = uri_assoc('invoice_id');
-
         $this->load->library('invoices/lib_output');
-
         $this->mdl_invoices->save_invoice_history($invoice_id, $this->session->userdata('user_id'), $this->lang->line('generated_invoice_html'));
-
         $this->lib_output->html($invoice_id, uri_assoc('invoice_template'));
     }
 
@@ -862,18 +853,12 @@ class Invoices extends Admin_Controller {
 
         $this->load->model('mdl_invoice_amounts');
         $invoice_id = uri_assoc('invoice_id');
-
         $this->mdl_invoice_amounts->delete_invoice_item_amounts($invoice_id);
-
         $this->mdl_invoice_amounts->adjust($invoice_id);
-
         if ($invoice_id) {
-
             $seg1 = $this->uri->segment(1);
-
             redirect($seg1 . '/edit/invoice_id/' . $invoice_id);
         } else {
-
             redirect('settings');
         }
     }

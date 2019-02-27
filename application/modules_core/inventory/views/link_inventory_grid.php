@@ -419,6 +419,7 @@
             //var columnpicker = new Slick.Controls.ColumnPicker(columns, grid, options);
             
             grid.onSelectedRowsChanged.subscribe(function() {
+                selectedInvs = [];
                 var rsels = grid.getSelectedRows();
                 for(var k = 0; k< rsels.length; k++){
                     var item = dataView.getItem(rsels[k]);

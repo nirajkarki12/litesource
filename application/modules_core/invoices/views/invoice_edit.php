@@ -1,217 +1,200 @@
-<?php $this->load->view('dashboard/header', array('header_insert'=>'invoices/invoice_edit_header')); ?>
-
+<?php $this->load->view('dashboard/header', array('header_insert' => 'invoices/invoice_edit_header')); ?>
 <?php echo modules::run('invoices/widgets/generate_dialog'); ?>
-
-<?php //echo modules::run('orders/order_widgets/generate_dialog'); ?>
-
-<?php //if (!$this->mdl_mcb_data->setting('disable_invoice_payments')) { ?>
-<?php //echo modules::run('payments/payment_widgets/generate_dialog'); ?>
-<?php //} ?>
-
 <?php $this->load->view('dashboard/jquery_date_picker'); ?>
-
 <script type="text/javascript" src="<?php echo base_url(); ?>assets/jquery/jquery.relcopy.js"></script>
-
 <script type="text/javascript">
-	$(function(){
-		//var append_to_clone = ' <a class="remove" href="#" onclick="$(this).parent().remove(); return false"><?php echo $this->lang->line('delete'); ?></a>';
-		//$('a.copy').relCopy({append: append_to_clone});
-		<?php if ($invoice->client_id == 0) { $tab_index = 1;} ?>			
-		$('#tabs').tabs({ selected: <?php echo $tab_index; ?> });
-	});
+    $(function () {
+        //var append_to_clone = ' <a class="remove" href="#" onclick="$(this).parent().remove(); return false"><?php echo $this->lang->line('delete'); ?></a>';
+        //$('a.copy').relCopy({append: append_to_clone});
+<?php if ($invoice->client_id == 0) {
+    $tab_index = 1;
+} ?>
+        $('#tabs').tabs({selected: <?php echo $tab_index; ?>});
+    });
 
 </script>
-
 <div class="grid_12" id="content_wrapper">
+    <form method="post" action="<?php echo site_url($this->uri->uri_string()); ?>">
+        <div class="section_wrapper">
+            <div class="title_black">
+                <div class="title_btns">
+                    <?php if (!$invoice->invoice_is_quote) { ?>
+                        <input type="submit" name="btn_quote_to_invoice" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('copy_invoice'); ?>" />
+                        <?php if (!$this->mdl_mcb_data->setting('disable_invoice_payments')) { ?>
+                            <input type="submit" name="btn_add_payment" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('enter_payment'); ?>" />
+    <?php } ?>
+<?php } else { ?>
+                        <input type="submit" name="btn_copy_quote" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('copy_quote'); ?>" />
+    <!--					<input type="submit" name="btn_quote_to_invoice" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('quote_to_invoice'); ?>" />
+                                <input type="submit" name="btn_quote_to_orders" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('quote_to_orders'); ?>" />-->
+                        <input type="submit"  id="btn_quote_to_orders_invoice" name="btn_quote_to_orders_invoice" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('quote_to_orders_invoice'); ?>" />
+                    <?php } ?>
 
-	<form method="post" action="<?php echo site_url($this->uri->uri_string()); ?>">
+                    <?php $this->load->view('dashboard/btn_add', array('btn_name' => 'btn_invoice_to_delivery_docket', 'btn_value' => $this->lang->line('docket_create'))); ?>
+<?php $this->load->view('dashboard/btn_add', array('btn_name' => 'btn_download_pdf', 'btn_value' => $this->lang->line('pdf_download'))); ?>
+<?php $this->load->view('dashboard/btn_add', array('btn_name' => 'btn_send_email', 'btn_value' => $this->lang->line('send_email'))); ?>
+                </div>
+                <h3><?php echo $invoice->client_name . ' &ndash; ' . ($invoice->invoice_is_quote == 1 ? $this->lang->line('quote_number') : $this->lang->line('invoice_number')) . ' ' . $invoice->invoice_number . ' (' . $invoice->client_group_name . ' Pricing)'; ?></h3>
 
-	<div class="section_wrapper">
+                <p class="sub_title"><?php echo ($invoice->project_id == 0 ? '' : $invoice->project_name); ?></p>
 
-		<div class="title_black">
+            </div>
 
+<?php $this->load->view('dashboard/system_messages'); ?>
 
-			<div class="title_btns">
-				<?php if (!$invoice->invoice_is_quote) { ?>
-                <input type="submit" name="btn_quote_to_invoice" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('copy_invoice'); ?>" />
-                <?php if (!$this->mdl_mcb_data->setting('disable_invoice_payments')) { ?>
-				<input type="submit" name="btn_add_payment" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('enter_payment'); ?>" />
-				<?php } ?>
-				<?php } else { ?>
-				<input type="submit" name="btn_copy_quote" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('copy_quote'); ?>" />
-<!--					<input type="submit" name="btn_quote_to_invoice" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('quote_to_invoice'); ?>" />
-					<input type="submit" name="btn_quote_to_orders" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('quote_to_orders'); ?>" />-->
-                                        <input type="submit"  id="btn_quote_to_orders_invoice" name="btn_quote_to_orders_invoice" style="float: right; margin-top: 10px; margin-right: 10px;" value="<?php echo $this->lang->line('quote_to_orders_invoice'); ?>" />
-				<?php } ?>
+            <div class="content toggle">
 
-				<?php $this->load->view('dashboard/btn_add', array('btn_name'=>'btn_invoice_to_delivery_docket', 'btn_value'=>$this->lang->line('docket_create'))); ?>
-				<?php $this->load->view('dashboard/btn_add', array('btn_name'=>'btn_download_pdf', 'btn_value'=>$this->lang->line('pdf_download'))); ?>
-				<?php $this->load->view('dashboard/btn_add', array('btn_name'=>'btn_send_email', 'btn_value'=>$this->lang->line('send_email'))); ?>
-			</div>
-			<h3><?php echo $invoice->client_name . ' &ndash; ' . ($invoice->invoice_is_quote == 1 ? $this->lang->line('quote_number') : $this->lang->line('invoice_number')) . ' ' . $invoice->invoice_number . ' ('. $invoice->client_group_name . ' Pricing)'; ?></h3>
+                <div id="tabs">
+                    <ul>
+                        <li><a href="#tab_items"><?php echo $this->lang->line('items'); ?></a></li>
+                        <li><a href="#tab_general"><?php echo $this->lang->line('summary'); ?></a></li>
+                        <?php if (!$this->mdl_mcb_data->setting('disable_invoice_payments') && !$invoice->invoice_is_quote) { ?>
+                            <li><a href="#tab_payments"><?php echo $this->lang->line('payments'); ?></a></li>
+                        <?php } ?>
+                        <li><a href="#tab_notes"><?php echo $this->lang->line('notes'); ?></a></li>
+                        <?php if (!$this->mdl_mcb_data->setting('disable_invoice_audit_history')) { ?>
+                            <li><a href="#tab_history"><?php echo $this->lang->line('history'); ?></a></li>
+<?php } ?>
+                        <li><a href="#tab_orders"><?php echo $this->lang->line('orders'); ?></a></li>
+                        <li><a href="#tab_dockets"><?php echo $this->lang->line('dockets'); ?></a></li>
 
-			<p class="sub_title"><?php echo ($invoice->project_id == 0 ? '' : $invoice->project_name); ?></p>
+<?php // echo '<pre>'; print_r($internaldetail_count); die;  ?>
 
-		</div>
+                        <li><a href="#tab_internal"><?php echo $this->lang->line('internal'); ?> (<?= $internaldetail_count ?>)</a></li>
+                    </ul>
+                    <div id="tab_items">
+<?php $this->load->view('item_grid'); ?>
+                    </div>
 
-		<?php $this->load->view('dashboard/system_messages'); ?>
+                    <div id="tab_general">
+                    <?php $this->load->view('tab_general'); ?>
+                    </div>
 
-		<div class="content toggle">
-                    
-				<div id="tabs">
-					<ul>
-                                            <li><a href="#tab_items"><?php echo $this->lang->line('items'); ?></a></li>
-                                            <li><a href="#tab_general"><?php echo $this->lang->line('summary'); ?></a></li>
-                                            <?php if (!$this->mdl_mcb_data->setting('disable_invoice_payments') && !$invoice->invoice_is_quote) { ?>
-                                            <li><a href="#tab_payments"><?php echo $this->lang->line('payments'); ?></a></li>
-                                            <?php } ?>
-                                            <li><a href="#tab_notes"><?php echo $this->lang->line('notes'); ?></a></li>
-                                            <?php if (!$this->mdl_mcb_data->setting('disable_invoice_audit_history')) { ?>
-                                            <li><a href="#tab_history"><?php echo $this->lang->line('history'); ?></a></li>
-                                            <?php } ?>
-                                            <li><a href="#tab_orders"><?php echo $this->lang->line('orders'); ?></a></li>
-                                            <li><a href="#tab_dockets"><?php echo $this->lang->line('dockets'); ?></a></li>
-                                            
-                                            <?php // echo '<pre>'; print_r($internaldetail_count); die; ?>
-                                            
-                                            <li><a href="#tab_internal"><?php echo $this->lang->line('internal'); ?> (<?= $internaldetail_count ?>)</a></li>
-					</ul>
-					<div id="tab_items">
-						<?php $this->load->view('item_grid'); ?>
-					</div>
-					
-					<div id="tab_general">
-						<?php $this->load->view('tab_general'); ?>
-					</div>
+                        <?php if (!$this->mdl_mcb_data->setting('disable_invoice_payments') && !$invoice->invoice_is_quote) { ?>
+                        <div id="tab_payments">
+                        <?php $this->load->view('payments/table'); ?>
+                        </div>
+                        <?php } ?>
 
-					<?php if (!$this->mdl_mcb_data->setting('disable_invoice_payments') && !$invoice->invoice_is_quote) { ?>
-					<div id="tab_payments">
-						<?php $this->load->view('payments/table'); ?>
-					</div>
-					<?php } ?>
-					
-					<div id="tab_notes">
-						<?php $this->load->view('tab_notes'); ?>
-					</div>
+                    <div id="tab_notes">
+                    <?php $this->load->view('tab_notes'); ?>
+                    </div>
 
-					<?php if (!$this->mdl_mcb_data->setting('disable_invoice_audit_history')) { ?>
-					<div id="tab_history">
-						<?php $this->load->view('tab_history'); ?>
-					</div>
-					<?php } ?>
+                        <?php if (!$this->mdl_mcb_data->setting('disable_invoice_audit_history')) { ?>
+                        <div id="tab_history">
+                        <?php $this->load->view('tab_history'); ?>
+                        </div>
+                        <?php } ?>
 
-					<div id="tab_orders">
-						<?php $this->load->view('orders/order_table'); ?>
-					</div>
+                    <div id="tab_orders">
+<?php $this->load->view('orders/order_table'); ?>
+                    </div>
 
-					<div id="tab_dockets">
-						<?php $this->load->view('delivery_dockets/delivery_docket_table'); ?>
-					</div>
-                                        <div id="tab_internal">
-						<?php $this->load->view('internal'); ?>
-					</div>
+                    <div id="tab_dockets">
+                        <?php $this->load->view('delivery_dockets/delivery_docket_table'); ?>
+                    </div>
+                    <div id="tab_internal">
+<?php $this->load->view('internal'); ?>
+                    </div>
 
-				</div>
+                </div>
 
-			<div style="clear: both;">&nbsp;</div>
+                <div style="clear: both;">&nbsp;</div>
 
-		</div>
+            </div>
 
-	</div>
+        </div>
 
-	</form>
+    </form>
 
 </div>
 
 <?php $this->load->view('dashboard/footer'); ?>
 
 <script type="text/javascript">
-    
-    $(document).ready(function(){
-        
-        function showPopup(whichpopup){
+
+    $(document).ready(function () {
+
+        function showPopup(whichpopup) {
             var docHeight = $(document).height();
             var scrollTop = $(window).scrollTop();
-            $('.overlay-bg').show().css({'height' : docHeight});
-            $('.popup'+whichpopup).show().css({'top': scrollTop+20+'px'});
-        } 
-        function closePopup(){
+            $('.overlay-bg').show().css({'height': docHeight});
+            $('.popup' + whichpopup).show().css({'top': scrollTop + 20 + 'px'});
+        }
+        function closePopup() {
             $('.overlay-bg, .overlay-content').hide();
         }
-        $('.show-popup').click(function(event){
+        $('.show-popup').click(function (event) {
             event.preventDefault();
             var selectedPopup = $(this).data('showpopup');
             showPopup(selectedPopup);
         });
-        $('.close-btn, .overlay-bg').click(function(){
+        $('.close-btn, .overlay-bg').click(function () {
             closePopup();
         });
-        
-        $('.close-syn_yes').click(function(){
-            window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id.'?hand_stock=1'); ?>";
+
+        $('.close-syn_yes').click(function () {
+            window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id . '?hand_stock=1'); ?>";
         });
-        $('.close-syn_no').click(function(){
+        $('.close-syn_no').click(function () {
             window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id); ?>";
         });
-        
-        $(document).keyup(function(e) {
+
+        $(document).keyup(function (e) {
             if (e.keyCode == 27) {
                 closePopup();
             }
         });
-        
+
         //---------- aJax------
-        $('#btn_quote_to_orders_invoice').on('click',function(e){
-            
-			
-			
-            //////mmmmmmmmmmmmmmmmmmmmmm
+        $('#btn_quote_to_orders_invoice').on('click', function (e) {
+
             //$('#btn_quote_to_orders_invoice').attr('disabled',true);
             e.preventDefault();
             $.ajax({
-                    url: "<?php echo site_url('invoices/check_order_creation/invoice_id/' . $invoice->invoice_id); ?>",
-                    dataType: 'json',
-                    type: 'POST',
-                    success: function (data) {
-                        
-                        if(data.result == 'no_items_selected'){
-                            alert(data.detail);
-                            $('#btn_quote_to_orders_invoice').attr('disabled',false);
-                        } else if(data.result == 'new_item_detected'){
-                            $('.popup_new_product div').html('');
-                            $('.popup_new_product div').append(data.detail);
-                            var selectedPopup = '_new_product';
-                            showPopup(selectedPopup);
-                            $('#btn_quote_to_orders_invoice').attr('disabled',false);
-                            $('#btn_quote_to_orders_invoice').attr('disabled',false);
-                        } else if(data.result == 'stuck_yes_no'){
-                            $('.popup1 p').html('');
-                            $('.popup1 p').append(data.detail);
-                            var selectedPopup = '1';
-                            showPopup(selectedPopup);
-                            $('#btn_quote_to_orders_invoice').attr('disabled',false);
-                        }else if(data.result == 'no_suppliers'){
-                            alert(data.detail);
-                            $('#btn_quote_to_orders_invoice').attr('disabled',false);
-                        }else if(data.result == 'problem'){
-                            if(confirm(data.detail)){
-                                window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id); ?>";
-                            }else{
-                                $('#btn_quote_to_orders_invoice').attr('disabled',false);
-                            }
-                        }else if(data.result == 'problem_redirect'){ 
-                            if(confirm(data.detail)){
-                                window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id.'?create_invoice=1'); ?>";
-                            }else{
-                                window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id.'?update_product=1'); ?>";
-                            }
-							
-							
-                        }else{
+                url: "<?php echo site_url('invoices/check_order_creation/invoice_id/' . $invoice->invoice_id); ?>",
+                dataType: 'json',
+                type: 'POST',
+                success: function (data) {
+
+                    if (data.result == 'no_items_selected') {
+                        alert(data.detail);
+                        $('#btn_quote_to_orders_invoice').attr('disabled', false);
+                    } else if (data.result == 'new_item_detected') {
+                        $('.popup_new_product div').html('');
+                        $('.popup_new_product div').append(data.detail);
+                        var selectedPopup = '_new_product';
+                        showPopup(selectedPopup);
+                        $('#btn_quote_to_orders_invoice').attr('disabled', false);
+                        $('#btn_quote_to_orders_invoice').attr('disabled', false);
+                    } else if (data.result == 'stuck_yes_no') {
+                        $('.popup1 p').html('');
+                        $('.popup1 p').append(data.detail);
+                        var selectedPopup = '1';
+                        showPopup(selectedPopup);
+                        $('#btn_quote_to_orders_invoice').attr('disabled', false);
+                    } else if (data.result == 'no_suppliers') {
+                        alert(data.detail);
+                        $('#btn_quote_to_orders_invoice').attr('disabled', false);
+                    } else if (data.result == 'problem') {
+                        if (confirm(data.detail)) {
                             window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id); ?>";
+                        } else {
+                            $('#btn_quote_to_orders_invoice').attr('disabled', false);
                         }
+                    } else if (data.result == 'problem_redirect') {
+                        if (confirm(data.detail)) {
+                            window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id . '?create_invoice=1'); ?>";
+                        } else {
+                            window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id . '?update_product=1'); ?>";
+                        }
+
+
+                    } else {
+                        window.location.href = "<?php echo site_url('invoices/quote_to_orders_invoice/invoice_id/' . $invoice->invoice_id); ?>";
                     }
-                })
+                }
+            })
         });
     });
 
@@ -269,22 +252,22 @@
     .close-syn_no:hover {
         background: #e3e3e3;
     }
-/* media query for most mobile devices */
-@media only screen and (min-width: 0px) and (max-width: 480px){
-    .overlay-content {
-        width: 96%;
-        margin: 0 2%;
-        left: 0;
+    /* media query for most mobile devices */
+    @media only screen and (min-width: 0px) and (max-width: 480px){
+        .overlay-content {
+            width: 96%;
+            margin: 0 2%;
+            left: 0;
+        }
+    }    
+    .popup1 button{
+        /*    margin-right: 6%;
+            margin-left: 11%;*/
     }
-}    
-.popup1 button{
-/*    margin-right: 6%;
-    margin-left: 11%;*/
-}
-.popup_new_product{
-    width: 95%;
-    left: 22%
-}
+    .popup_new_product{
+        width: 95%;
+        left: 22%
+    }
 </style>
 
 <div class="overlay-bg">
@@ -295,8 +278,6 @@
     <button class="hq_btn close-syn_no">As Per Quote</button>
     <button class="hq_btn close-btn">Cancel</button>
 </div>
-
-
 <div class="overlay-content popup_new_product">
     <div>
         <p style="font-size: 17px;margin-bottom: 10px;"></p>

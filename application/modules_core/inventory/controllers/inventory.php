@@ -744,7 +744,37 @@ class Inventory extends Admin_Controller {
         echo 'fail';
         exit;
     }
-    
+    public function product_inventory_relation() {
+        $this->load->view('product_inventory_relation');
+    }
+    //clear link of inventory to product
+    public function delinkproductinventoryinv() {
+        ini_set('max_execution_time', 3000);
+        $invlistdetail = $this->input->post('id');
+        $this->load->model('inventory/mdl_inventory_item');
+        if ($this->mdl_inventory_item->updateinvprodrelation1inv($invlistdetail)) {
+            $this->session->set_flashdata('custom_success', 'Successfully delinked');
+            echo 'success';
+            exit;
+        }
+        $this->session->set_flashdata('custom_error', 'Error while delinking.');
+        // echo 'fail';
+        exit;
+    }
+    //clear link of product to inventory
+    public function delinkproductinventorypro() {
+        ini_set('max_execution_time', 3000);
+        $prodlistdetail = $this->input->post('pd');
+        $this->load->model('inventory/mdl_inventory_item');
+        if ($this->mdl_inventory_item->updateinvprodrelation1pro($prodlistdetail)) {
+            $this->session->set_flashdata('custom_success', 'Successfully delinked.');
+            echo 'success';
+            exit;
+        }
+        $this->session->set_flashdata('custom_error', 'Error while delinking.');
+        // echo 'fail';
+        exit;
+    }
 
 }
 

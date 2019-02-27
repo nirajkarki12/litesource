@@ -221,7 +221,13 @@ class Mdl_Delivery_Dockets extends MY_Model {
 
         return $fin;
     }
-
+    //to update amount on editing amount in invoice item
+    public function updatedocket1($item){
+            $total_amount = filter_var($item['invoice_amounts']->invoice_total, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+            $data = array('price_with_tax'=>$total_amount);
+            $this->db->where('invoice_id',$item['item']['l_data']->invoice_id);
+            $this->db->update('mcb_delivery_dockets',$data);
+    }
     /**
      * we allow infinite number of dockets for an invoice
      */

@@ -119,6 +119,7 @@
         
         grid2.onSelectedRowsChanged.subscribe(function() {
                 var rsels = grid2.getSelectedRows();
+                selectedPds = [];
                 for(var k = 0; k< rsels.length; k++){
                     var item = dataView2.getItem(rsels[k]);
                     if(typeof item != 'undefined'){
