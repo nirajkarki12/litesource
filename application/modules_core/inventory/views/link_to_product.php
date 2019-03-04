@@ -136,7 +136,7 @@
             
             <div class="filterarea">
                 <input type="button" name="applyinventorytoprod" id="applyinventorytoprod" value="Apply" />
-                <input type="button" name="delinventorytoprod" id="remove-inventory-product-relation" value="clear link" />
+                <input type="button" name="delinventorytoprod" id="remove-inventory-product-relation" value="Clear Link" />
             </div>
             <div class="row" style="margin-top: 30px;">
                 <div class="col-md-6 link_inventory_grid">
