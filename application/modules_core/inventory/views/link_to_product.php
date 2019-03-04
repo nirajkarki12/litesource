@@ -136,7 +136,7 @@
             
             <div class="filterarea">
                 <input type="button" name="applyinventorytoprod" id="applyinventorytoprod" value="Apply" />
-                <input type="button" name="delinventorytoprod" id="remove-inventory-product-relation" value="clear link" />
+                <input type="button" name="delinventorytoprod" id="remove-inventory-product-relation" value="Clear Link" />
             </div>
             <div class="row" style="margin-top: 30px;">
                 <div class="col-md-6 link_inventory_grid">
@@ -426,6 +426,8 @@
                 alert('Please select item.');
                 $(this).removeAttr('disabled');
             }
+            else{
+            if (confirm('Are you sure you wish to continue?')) {
             
             if(invlist.length > 0){
                 $('.inventoryGridwrap .loader').addClass('loading');
@@ -459,6 +461,11 @@
                     }
                 });  
             }
+        }else {
+                    $(this).removeAttr('disabled');
+                }
+            }
+
         });
         $('#showunlinedinventory').on('click', function () {
             $('.inventoryGridwrap .loader').addClass('loading');
