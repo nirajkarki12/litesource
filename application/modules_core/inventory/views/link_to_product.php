@@ -426,6 +426,8 @@
                 alert('Please select item.');
                 $(this).removeAttr('disabled');
             }
+            else{
+            if (confirm('Are you sure you wish to continue?')) {
             
             if(invlist.length > 0){
                 $('.inventoryGridwrap .loader').addClass('loading');
@@ -459,6 +461,11 @@
                     }
                 });  
             }
+        }else {
+                    $(this).removeAttr('disabled');
+                }
+            }
+
         });
         $('#showunlinedinventory').on('click', function () {
             $('.inventoryGridwrap .loader').addClass('loading');
