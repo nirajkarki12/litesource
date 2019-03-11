@@ -155,7 +155,7 @@ class Invoices extends Admin_Controller {
             'internaldetail_count' => $this->mdl_invoices->getQuoteInternalFromInvoiceId($invoice->invoice_id)['internal_count'],
             'payments' => $this->mdl_invoices->get_invoice_payments($invoice->invoice_id),
             'history' => $this->mdl_invoices->get_invoice_history($invoice->invoice_id),
-            'invoice_items' => $this->mdl_invoices->get_invoice_items($invoice->invoice_id),
+            //'invoice_items' => $this->mdl_invoices->get_invoice_items($invoice->invoice_id),
             //'invoice_tax_rates' =>  $this->mdl_invoices->get_invoice_tax_rates($invoice->invoice_id),
             //'orders' => $this->mdl_orders->get_invoice_orders($invoice->invoice_id),
             //'dockets' => $this->mdl_delivery_dockets->get_invoice_dockets($invoice->invoice_id),
