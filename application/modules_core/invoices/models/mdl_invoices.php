@@ -1033,7 +1033,7 @@ class Mdl_Invoices extends MY_Model {
                 $this->load->model('products/mdl_products');
                 //$product = $this->mdl_products->get_product_by_name($new_name);
                 $product = $this->get_row('mcb_products', array('product_name' => span_to_mm($new_name), 'is_arichved !=' => '1'));
-//                echo '<pre>';
+//                 echo '<pre>';
 //                print_r($product);
 //                exit();
                 if ($product != NULL) {
@@ -1041,7 +1041,6 @@ class Mdl_Invoices extends MY_Model {
                     $new_description = $product->product_description;
                     $product_id = $product->product_id;
                     $item->product_id = $product->product_id;
-                    $item->original_name = $product->product_name;
                     $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
                     $item->product_dynamic = $product->product_dynamic;
                     $msg = 'Name change for invoice item ' . $invoice_item_id . '(' . $old_item->item_name . ' -> ' . $new_name . ')';
@@ -1146,7 +1145,6 @@ class Mdl_Invoices extends MY_Model {
         //echo $new_description; exit;
 
         $db_set = array(
-            'original_name'=>$item->original_name,
             'item_type' => $item->item_type,
             'item_qty' => $item->item_qty,
             'item_name' => $new_name,
@@ -1579,24 +1577,20 @@ class Mdl_Invoices extends MY_Model {
 //        $items = $this->db->get('mcb_invoice_items')->result();
         //print_r($this->db->last_query()); exit;
 
-        $sql = "SELECT ii.invoice_item_id AS id, ii.*, "
-                . "mii.supplier_id, mcb_invoice_item_amounts.* "
-                . "FROM mcb_invoice_items AS ii "
-                . "INNER JOIN mcb_invoice_item_amounts ON mcb_invoice_item_amounts.invoice_item_id = ii.invoice_item_id "
-                . "left join mcb_inventory_item as mii on (mii.inventory_id = ii.product_id AND mii.is_arichved != '1') "
-                . "WHERE `ii`.`invoice_id` = '" . $invoice_id . "' GROUP BY mcb_invoice_item_amounts.invoice_item_id "
-                . "ORDER BY item_index, ii.invoice_item_id, item_index, ii.invoice_item_id";
-        
+        $sql = "SELECT mcb_invoice_items.*,mii.supplier_id,mcb_invoice_item_amounts.* FROM (mcb_invoice_items) INNER JOIN mcb_invoice_item_amounts ON mcb_invoice_item_amounts.invoice_item_id = mcb_invoice_items.invoice_item_id left join mcb_inventory_item as mii on (mii.inventory_id = mcb_invoice_items.product_id AND mii.is_arichved != '1') WHERE `mcb_invoice_items`.`invoice_id` = '" . $invoice_id . "' GROUP BY mcb_invoice_item_amounts.invoice_item_id ORDER BY item_index, mcb_invoice_items.invoice_item_id, item_index, mcb_invoice_items.invoice_item_id";
+
         $q = $this->db->query($sql);
         $items = $q->result();
 
         $fin = array();
-        
+
+
+
         if (sizeof($items) > 0) {
             foreach ($items as $item) {
                 $item->is_removed = 0;
                 $item->is_archived = 0;
-                $item->inv_sup = 0;
+				$item->inv_sup = 0;
                 $item->cleaned = span_to_mm($item->item_name, $item->item_length, 1000);
                 //,'name'=> mm_to_span($item->item_name, $item->item_length, 1000)
                 //
@@ -1605,8 +1599,8 @@ class Mdl_Invoices extends MY_Model {
 
                 $qry = "SELECT * from mcb_products where product_name='" . span_to_mm($item->item_name, $item->item_length, 1000) . "' and is_arichved != '1'";
 
-                
-                
+
+
 
                 // $qry = 'SELECT * from mcb_products where product_id=' ' and  product_name = '.$mm_to_span($item->item_name, $item->item_length, 1000);
 
@@ -1637,7 +1631,11 @@ class Mdl_Invoices extends MY_Model {
                     $item->product_dynamic = '0';
                     $item->is_removed = 1;
                 }
+                
+                
+                
                 $item->stock_status = $this->getStockStatus($item);
+                $item->id = $item->invoice_item_id;
                 $fin[] = $item;
             }
         }
