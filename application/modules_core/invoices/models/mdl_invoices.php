@@ -1033,7 +1033,7 @@ class Mdl_Invoices extends MY_Model {
                 $this->load->model('products/mdl_products');
                 //$product = $this->mdl_products->get_product_by_name($new_name);
                 $product = $this->get_row('mcb_products', array('product_name' => span_to_mm($new_name), 'is_arichved !=' => '1'));
-//                 echo '<pre>';
+//                echo '<pre>';
 //                print_r($product);
 //                exit();
                 if ($product != NULL) {
@@ -1041,6 +1041,7 @@ class Mdl_Invoices extends MY_Model {
                     $new_description = $product->product_description;
                     $product_id = $product->product_id;
                     $item->product_id = $product->product_id;
+                    $item->original_name = $product->product_name;
                     $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
                     $item->product_dynamic = $product->product_dynamic;
                     $msg = 'Name change for invoice item ' . $invoice_item_id . '(' . $old_item->item_name . ' -> ' . $new_name . ')';
@@ -1123,6 +1124,7 @@ class Mdl_Invoices extends MY_Model {
             $item->product_dynamic = '0';
             $item->item_price = '';
             $product_id = 0;
+            $item->original_name = '';
         }
         
         //echo '...'.$new_description; exit;
@@ -1138,6 +1140,7 @@ class Mdl_Invoices extends MY_Model {
             $item->item_per_meter = '';
             $item->item_length = '';
             $item->item_price = '';
+            $item->original_name = '';
             $product_id = '';
             $item->product_dynamic = 0;
         }
@@ -1148,6 +1151,7 @@ class Mdl_Invoices extends MY_Model {
             'item_type' => $item->item_type,
             'item_qty' => $item->item_qty,
             'item_name' => $new_name,
+            'original_name' => $item->original_name,
             'item_description' => $new_description,
             'item_length' => $item->item_length,
             'item_per_meter' => $item->item_per_meter,
@@ -1634,7 +1638,7 @@ class Mdl_Invoices extends MY_Model {
                 
                 
                 
-                $item->stock_status = $this->getStockStatus($item);
+                //$item->stock_status = $this->getStockStatus($item);
                 $item->id = $item->invoice_item_id;
                 $fin[] = $item;
             }

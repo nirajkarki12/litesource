@@ -1587,8 +1587,6 @@ class Invoices extends Admin_Controller {
             //'users'             =>  $this->mdl_users->get(),
             'invoices' => $this->mdl_invoices->get_no_joins($is_quote, $limit, $offset)
         );
-
-
         echo json_encode($data);
     }
 
@@ -1601,17 +1599,15 @@ class Invoices extends Admin_Controller {
         $data = array(
             'invoices' => $this->mdl_invoices->search_by_product($is_quote, $item_name, $item_desc)
         );
-
         echo json_encode($data);
     }
-
     public function getMinimumPossibleProduct() {
         $this->load->model('orders/mdl_orders');
         $min = $this->mdl_orders->getMinimumPossibleProduct('69875');
         print_r($min);
         exit;
     }
-
+    
 }
 
 ?>
