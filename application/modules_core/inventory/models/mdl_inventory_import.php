@@ -238,8 +238,8 @@ class Mdl_Inventory_Import extends MY_Model {
             }
             fclose($handle);
         }
-
-
+        
+        
         $err_bkp = '';
         //if ($imported_inventory_ids != '' || $updated_inventory_str != '') {
         //add record for rollback, 
@@ -368,7 +368,11 @@ class Mdl_Inventory_Import extends MY_Model {
                 'inventory_type' => '0',
                 'is_arichved'=>'0'
             );
-			
+            if(isset($_POST['unaffect_qty'])){
+                if($this->input->post('unaffect_qty') == '1'){
+                    unset($data_i['qty']);
+                }
+            }
         } elseif(count($data) <= 5) {
             
 //            echo 'sssssss';

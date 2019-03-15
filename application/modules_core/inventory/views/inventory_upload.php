@@ -88,6 +88,10 @@
                     
                     <label>
                         <input type="checkbox" id="product_type" name="db_inventory_overwrite" value="1">Overwrite database(only parts)
+                    </label>
+                    
+                    <label>
+                        <input style="margin-left: 30%" type="checkbox" name="unaffect_qty" value="1">Maintain live stock counts
                     </label><br>
                     
                     <input type="submit" id="btn_submit" name="btn_upload_inventory" class="chk_inv_type"  value="<?php echo $this->lang->line('inventory_upload'); ?>" />
