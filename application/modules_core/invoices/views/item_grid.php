@@ -1275,21 +1275,19 @@ echo "var currencySymbol = '" . $CI->mdl_mcb_data->setting('currency_symbol') . 
             //$('.slick-cell:first').click();
 
         }, "json");
-
-
-
         $(document).on('click', '.addRowBelow', addRowMiddle);
-
-//        $(document).on('click', '.deleteline', function(e){
-//            e.preventDefault();
-//            return false;
-//        });
-
-        $(document).on('click', '.open-popup', function () {
-            var el = $(this);
+        $(document).on('click', '.open-popup', function (e) {
+        var proid=$(this).attr('value');
+        var itname=$(this).attr('itemname');
+    $.ajax({
+            type: 'POST',
+            dataType: 'html',
+            url: '<?php echo site_url('inventory/viewinventorypopup'); ?>',
+            data: {proid:proid,itname:itname},
+           success: function (data) {
             $.magnificPopup.open({
                 items: {
-                    src: '<div class="small-dialog">' + $(this).data('message') + '</div>', // can be a HTML string, jQuery object, or CSS selector
+                    src: '<div class="small-dialog">' +data + '</div>', // can be a HTML string, jQuery object, or CSS selector
                     type: 'inline',
                     fixedContentPos: false,
                     fixedBgPos: true,
@@ -1302,14 +1300,16 @@ echo "var currencySymbol = '" . $CI->mdl_mcb_data->setting('currency_symbol') . 
                 },
                 callbacks: {
                     beforeOpen: function () {
-                        this.st.mainClass = el.attr('data-effect');
+                     
                     }
                 },
             });
-        });
+            }
+        });   
+
+         });
 
     });
-
     function additemsToDelete(elem) {
 
     }
@@ -1433,4 +1433,3 @@ echo "var currencySymbol = '" . $CI->mdl_mcb_data->setting('currency_symbol') . 
         addNewInvoiceItem(item, position);
     }
 </script>
-

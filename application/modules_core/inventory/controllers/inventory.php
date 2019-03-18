@@ -775,6 +775,55 @@ class Inventory extends Admin_Controller {
         // echo 'fail';
         exit;
     }
+    
+    function viewinventorypopup() {
+        $proid = $this->input->post('proid');
+        $itname = $this->input->post('itname');
+        $this->stock_msg = '';
+        $this->stock_color = array();
+        $popHtml = '<div class="inv-detail">';
+        $popHtml .= '<h2>' . $itname . '</h2><br/>';
+        $popHtml .= '<div class="prod-link"><a href="' . site_url() . '/products/form/product_id/' . $proid . '" target="_blank">Add Inventory | Edit Product</a></div>';
+        $popHtml .= '<h3>Inventory Items:</h3>';
+        $popHtml .= '<table class="table table-bordered order-prod-list">';
+        $popHtml .= '<thead>';
+        $popHtml .= '<tr>';
+        $popHtml .= '<td>S.N</td>';
+        $popHtml .= '<td>Inventory Item Name</td>';
+        $popHtml .= '<td>Qty</td>';
+        $popHtml .= '<td>Required Qty</td>';
+        $popHtml .= '</tr>';
+        $popHtml .= '</thead>';
+        $popHtml .= '<tbody>';
+        $inventory_items = $this->mdl_inventory_item->getInventoryItems($proid);
+        if (sizeof($inventory_items) > 0) {
+            $cnt = 1;
+            foreach ($inventory_items as $item) {
+                $popHtml .= '<tr><td>' . $cnt . '</td>';
+                $popHtml .= '<td>' . $item->name . '</td>';
+                $popHtml .= '<td>' . floor($item->qty) . '</td>';
+                $popHtml .= '<td>' . $item->inventory_qty . '</td>';
+                if (((float) ($item->qty + $invoice_item_id_qty)) - ((float) $itemS->item_qty * $item->inventory_qty) < LOW_STOCK) {
+                    $this->stock_msg .= '<p>' . $item->name . " stock quantity is low. Total available quantity is " . $item->qty . '</p>';
+                    $this->stock_color[] = 'yellow';
+                } elseif (((float) $itemS->item_qty * $item->inventory_qty) > (float) ($item->qty + $invoice_item_id_qty)) {
+                    $this->stock_msg .= "<p>Not enough " . $item->name . " inventory item for the product " . $item->item_name . '</p>';
+                    $this->stock_color[] = 'red';
+                } else {
+                    $this->stock_msg .= '<p>' . $item->name . " stock quantity is " . $item->qty . '</p>';
+                    $this->stock_color[] = 'green';
+                }
+                $popHtml .= '</tr>';
+                $cnt++;
+            }
+        } else {
+            $popHtml .= '<tr><td colspan="4">There are no inventory items.</td></tr>';
+            $this->stock_msg .= '<p>There are no inventory items for the product ' . $itemS->item_name . '</p>';
+            $this->stock_color[] = 'red';
+        }
+        $popHtml .= '</tbody></table></div>';
+        echo $popHtml;
+    }
 
 }
 
