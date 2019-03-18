@@ -1563,102 +1563,100 @@ class Mdl_Invoices extends MY_Model {
         $stkqty = ((float) $lesserQtyInventory > 0 && $lesserQtyInventory != '999999999999999') ? floor($lesserQtyInventory) : '0';
         return '<a data-color="' . $res['color'] . '" data-effect="mfp-zoom-in" data-message=\'' . $popHtml . '\' class="open-popup help ' . $res['color'] . '"><span>' . $stkqty . '</span></a>';
     }
-
+    
+    function get_quote_stock_status($item) {
+        
+        $lesserQtyInventory = 999999999999999;
+        if ((int) $item->product_id > 0) {
+            if($item->inventory_count == 1){
+                $lesserQtyInventory = 999999999999999;
+                $numProdFormed = (int) $item->s_qty / $item->s_inventory_qty;
+                if ($lesserQtyInventory > $numProdFormed) {
+                    $lesserQtyInventory = $numProdFormed;
+                }
+            }elseif($item->inventory_count > 1){
+                $lesserQtyInventory = 999999999999999;
+                $sql2 = "SELECT pi.inventory_id, ii.qty AS s_qty, pi.inventory_qty AS s_s_inventory_qty "
+                        . "FROM mcb_products_inventory as pi "
+                        . "INNER JOIN mcb_inventory_item as ii ON ii.inventory_id = pi.inventory_id "
+                        . "WHERE pi.product_id = '".$item->product_id."' AND pi.inventory_id != '0'";
+                $inventory_items = $this->common_model->query_as_object($sql2);
+                if (sizeof($inventory_items) > 0) {
+                    foreach ($inventory_items as $item) {
+                        $numProdFormed = (int) $item->s_qty / $item->s_inventory_qty;
+                        if ($lesserQtyInventory > $numProdFormed) {
+                            $lesserQtyInventory = $numProdFormed;
+                        }
+                    }
+                }
+            }
+        }else{
+            $lesserQtyInventory = 0;
+        }
+        $stkqty = ((float) $lesserQtyInventory > 0 && $lesserQtyInventory != '999999999999999') ? floor($lesserQtyInventory) : '0';
+        return '<div id="new" class="open-popup" style="text-align:center;" value="'.$item->product_id.'" itemname="'.$item->item_name.'">'.$stkqty.'</div>';
+    }
+    
     public function get_invoice_items($invoice_id) {
-         //error_reporting(E_ALL); ini_set('display_errors', 1);
-        //$this->db->select('mcb_invoice_items.invoice_item_id, product_id, item_name, item_description, item_qty, item_price, item_subtotal, item_tax, item_total');
-//        $this->db->where('mcb_invoice_items.invoice_id', $invoice_id);
-//
-//        $this->db->join('mcb_invoice_item_amounts', 'mcb_invoice_item_amounts.invoice_item_id = mcb_invoice_items.invoice_item_id','left');
-//
-//        //$this->db->join('mcb_tax_rates', 'mcb_tax_rates.tax_rate_id = mcb_invoice_items.tax_rate_id', 'LEFT');
-//
-//
-//        $this->db->order_by('item_index, mcb_invoice_items.invoice_item_id');
-//
-//        $this->db->order_by('item_index, mcb_invoice_items.invoice_item_id');
-//
-//        $items = $this->db->get('mcb_invoice_items')->result();
-        //print_r($this->db->last_query()); exit;
-
-        $sql = "SELECT mcb_invoice_items.*,mii.supplier_id,mcb_invoice_item_amounts.* FROM (mcb_invoice_items) INNER JOIN mcb_invoice_item_amounts ON mcb_invoice_item_amounts.invoice_item_id = mcb_invoice_items.invoice_item_id left join mcb_inventory_item as mii on (mii.inventory_id = mcb_invoice_items.product_id AND mii.is_arichved != '1') WHERE `mcb_invoice_items`.`invoice_id` = '" . $invoice_id . "' GROUP BY mcb_invoice_item_amounts.invoice_item_id ORDER BY item_index, mcb_invoice_items.invoice_item_id, item_index, mcb_invoice_items.invoice_item_id";
-
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        $sql = "SELECT mcb_invoice_items.*, mii.supplier_id, mcb_invoice_item_amounts.*, "
+                . "pi.inventory_id AS s_inventory_id, pi.inventory_qty AS s_inventory_qty, i_itm.qty AS s_qty, "
+                . "IF(pro.is_arichved != '1', pro.product_id, NULL) AS p_product_id, pro.supplier_id AS p_supplier_id, pro.product_dynamic AS p_product_dynamic, pro.is_arichved AS p_is_arichved, "
+                . "(SELECT count(mcb_products_inventory.inventory_id) FROM mcb_products_inventory WHERE mcb_products_inventory.product_id = mcb_invoice_items.product_id ) AS inventory_count "
+                . "FROM (mcb_invoice_items) "
+                . "INNER JOIN mcb_invoice_item_amounts ON mcb_invoice_item_amounts.invoice_item_id = mcb_invoice_items.invoice_item_id "
+                . "left join mcb_inventory_item as mii on (mii.inventory_id = mcb_invoice_items.product_id AND mii.is_arichved != '1') "
+                . "left join mcb_products as pro on (pro.product_name = mcb_invoice_items.original_name AND mii.is_arichved != '1') "
+                . "left join mcb_products_inventory as pi on (mcb_invoice_items.product_id = pi.product_id) "
+                . "left join mcb_inventory_item as i_itm on (i_itm.inventory_id = pi.inventory_id) "
+                . "WHERE `mcb_invoice_items`.`invoice_id` = '" . $invoice_id . "' "
+                . "GROUP BY mcb_invoice_item_amounts.invoice_item_id "
+                . "ORDER BY item_index, mcb_invoice_items.invoice_item_id, item_index, mcb_invoice_items.invoice_item_id";
         $q = $this->db->query($sql);
         $items = $q->result();
-
         $fin = array();
-
-
-
         if (sizeof($items) > 0) {
             foreach ($items as $item) {
                 $item->is_removed = 0;
                 $item->is_archived = 0;
-				$item->inv_sup = 0;
-                $item->cleaned = span_to_mm($item->item_name, $item->item_length, 1000);
-                //,'name'=> mm_to_span($item->item_name, $item->item_length, 1000)
-                //
-			   //product ID unreliable
-                // $pd = $this->get_row('mcb_products', array('product_id' => $item->product_id));
-
-                $qry = "SELECT * from mcb_products where product_name='" . span_to_mm($item->item_name, $item->item_length, 1000) . "' and is_arichved != '1'";
-
-
-
-
-                // $qry = 'SELECT * from mcb_products where product_id=' ' and  product_name = '.$mm_to_span($item->item_name, $item->item_length, 1000);
-
-                $pd = $this->db->query($qry)->row();
+                $item->inv_sup = 0;
                 
-//                if ($item->invoice_item_id == '386543') {
-//                    echo '<pre>'; print_r($pd); exit;
-//                    exit;
-//                }
-				
-                if ($pd != NULL) {
-					$item->inv_sup = $pd->supplier_id;
-                    $item->product_dynamic = $pd->product_dynamic;
+                if ($item->p_product_id > 0) {
+                    $item->inv_sup = $item->p_supplier_id;
+                    $item->product_dynamic = $item->p_product_dynamic;
                     
-                    if ($item->product_id == '0' && $pd->product_id != '0') {
-                        $item->product_id = $pd->product_id;
+                    if ($item->product_id == '0' && $item->p_product_id != '0') {
+                        $item->product_id = $item->p_product_id;
                     }
-                    
-                    if ($pd->is_arichved == '1') {
+                    if ($item->p_is_arichved == '1') {
                         $item->is_removed = 1;
                         $item->is_archived = 1;
                     }
-
-//                    if ($pd->is_removed == '1') {
-//                        $item->is_removed = 1;
-//                    }
+                    //if ($pd->is_removed == '1') {
+                    //    $item->is_removed = 1;
+                    //}
                 } else {
                     $item->product_dynamic = '0';
                     $item->is_removed = 1;
                 }
-                
-                
-                
-                //$item->stock_status = $this->getStockStatus($item);
+                // $item->stock_status = $this->getStockStatus($item);
+                $item->stock_status = $this->get_quote_stock_status($item);
                 $item->id = $item->invoice_item_id;
                 $fin[] = $item;
             }
         }
+        //echo "<pre>";
+        //print_r($fin); 
+        //exit;
         return $fin;
-//        echo "<pre>";
-//        print_r($fin); exit;
     }
 
     public function get_invoice_item_amounts($invoice_item_id) {
-
         $this->db->where('invoice_item_id', $invoice_item_id);
         $this->db->select('invoice_item_id, item_subtotal, item_tax, item_total');
-
         $query = $this->db->get('mcb_invoice_item_amounts');
-
         if ($query->num_rows() > 0) {
-
             return $query->row();
-            ;
         }
     }
 

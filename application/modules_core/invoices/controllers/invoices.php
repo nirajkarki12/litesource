@@ -1608,6 +1608,13 @@ class Invoices extends Admin_Controller {
         exit;
     }
     
+    function rem_original_name_fix() {
+        $sql = "SELECT * FROM `mcb_invoice_items` WHERE `item_name`!='' AND `original_name`= ''";
+        $res = $this->common_model->query_as_object($sql);
+        foreach ($res as $res_v) {
+            $this->common_model->update('mcb_invoice_items', array('original_name'=> span_to_mm($res_v->item_name, $res_v->item_length, 1000)), array('invoice_item_id'=>$res_v->invoice_item_id));
+        }
+    }
 }
 
 ?>
