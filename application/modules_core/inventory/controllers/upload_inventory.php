@@ -54,6 +54,7 @@ class Upload_Inventory extends Admin_Controller {
     
     
     function do_upload() {
+        //die;
         $config = array(
             'upload_path' => './uploads/inventory/',
 //            'upload_path' => 'uploads/inventory/',

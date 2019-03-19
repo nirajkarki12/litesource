@@ -18,13 +18,73 @@ class Mdl_Inventory_Import extends MY_Model {
 
         $this->primary_key = 'mcb_inventory_import.id';
     }
-    
+
+//    function process_inventory_data_file__($source_file) {
+//
+//        log_message('debug', 'Processing inventory data file ' . $source_file);
+//
+//        $this->clear_import_table();
+//        $fh = fopen($source_file, "r");
+//
+//        $insert_rows = array();
+//        $line = 0;
+//
+//        $last_name = '';
+//
+//        while (!feof($fh)) {
+//
+//            $line++;
+//            $data = fgetcsv($fh, 4096, '|');
+//            //0 supplier_id
+//            //1 name
+//            //2 description
+//            //3 base_price
+//            //4 qty
+//            //5 supplier_code
+//            //6 supplier_decription
+//            //7 supplier_price
+//            //8 location
+//            $recs = count($data);
+//            $name = $data[1];
+//            $cmp = strcmp($name, $last_name);
+//
+//            if (($recs == 9) && ($cmp != 0)) {
+//                $insert_rows[] = array(
+//                    'supplier_id' => $data[0],
+//                    'name' => $data[1],
+//                    'description' => trim($data[2], " "),
+//                    'base_price' => trim($data[3], " "),
+//                    'qty' => $data[4],
+//                    'supplier_code' => $data[5],
+//                    'supplier_description' => $data[6],
+//                    'supplier_price' => $data[7],
+//                    'location' => trim($data[8], " "));
+//            } else {
+//
+//                log_message('debug', 'Line ' . $line . " empty or invalid in file since record count is " . $recs);
+//            }
+//
+//            $last_name = $name;
+//        }
+//
+//        fclose($fh);
+//        $this->db->insert_batch($this->table_name, $insert_rows);
+//
+//        $this->insert_new_inventory();
+//        $this->insert_new_inventory_history();
+//
+//        log_message('debug', 'Processed ' . count($insert_rows) . ' records.');
+//
+//        //$this->db->set('product_name', $productItem_name);
+//    }
+
     public function process_inventory_data_file($source_file, $filename) {
         
         // error_reporting(E_ALL); ini_set('display_errors', TRUE); 
+        
         ini_set('max_execution_time', 30000);
         log_message('debug', 'Processing inventory data file ' . $source_file);
-        
+
         //now clearing import table, rather keeping rollback feature for all past imports
         //$this->clear_import_table();
         $row = 1;
@@ -37,9 +97,10 @@ class Mdl_Inventory_Import extends MY_Model {
         $num = 0;
         $updated_prod_array = array();
         $updated_inventory_str = '';
-
+        
         if (($handle_test = fopen($source_file, "r")) !== FALSE) {
             while (($data_test = fgetcsv($handle_test, 0, ",")) !== FALSE) {
+
                 $temp_test = array();
                 foreach ($data_test as $d) {
                     $val_test = str_replace("\0", "", $d);
@@ -47,67 +108,95 @@ class Mdl_Inventory_Import extends MY_Model {
                 }
                 $data_test = $temp_test;
                 $num_test = count($data_test);
-                if ($num_test <= 6) {
+                if($num_test <= 6){
                     $in_typ = '1';
-                } else {
+                }else{
                     $in_typ = '0';
                 }
             }
         }
-        if (($this->input->post('db_inventory_overwrite') == '1')) {
+        
+        
+        if( ($this->input->post('db_inventory_overwrite') == '1') ){
             $this->export_before_import($in_typ, NULL);
             $this->delete_override_inventory($source_file, $in_typ);
         }
         
+        
         if (($handle = fopen($source_file, "r")) !== FALSE) {
             while (($data = fgetcsv($handle, 0, ",")) !== FALSE) {
+				
                 $temp = array();
                 foreach ($data as $d) {
                     $val = str_replace("\0", "", $d);
                     $temp[] = $val;
+					
                 }
+				
                 $data = $temp;
                 $num = count($data);
-                
+             
                 if (($row == 1)) {
-                    if ($num >= 8) {
-                        if ($data[1] == 'supplier_name' && $data[2] == 'product_name' && $data[3] == 'product_supplier_code' && $data[4] == 'product_description' && $data[5] == 'product_supplier_description' && $data[6] == 'product_supplier_price' && $data[7] == 'product_base_price' && ($data[8] == 'qty' || $data[9] == 'qty_on_order') && $data[10] == 'warehouse_location') {
-                            //if all true.. do nothing..
-                        } else {
-                            $error_str .= 'The CSV file is not of valid format. Please see an example export for the right format.<br>';
-                            break;
-                        }
-                    }
-                    if ($num <= 6) {
-                        if ($data[1] == 'supplier_name' && $data[2] == 'name' && $data[3] == 'description' && $data[4] == 'base_price' && $data[5] == 'location') {
-                            //if all true.. do nothing..
-                        } else {
+                    //if ($data[1] != 'product_name' || $data[0] != 'supplier_name' || $data[2] != 'product_supplier_code' || $data[3] != 'product_description' || $data[4] != 'product_supplier_description' || $data[5] != 'stock_qty' || $data[6] != 'product_supplier_price' || $data[9] != 'warehouse_location') {
+                    if($num >= 8){
+						
+						//echo ($data[0] != 'supplier_name' || $data[1] != 'product_name' || $data[2] != 'product_supplier_code' || $data[3] != 'product_description' || $data[4] != 'product_supplier_description' || $data[5] != 'product_supplier_price' || $data[6] != 'product_base_price' || $data[8] != 'qty_on_order' || $data[9] != 'warehouse_location' || $data[7] != 'qty');
+					
+                        if ($data[0] == 'supplier_name' && $data[1] == 'product_name' && $data[2] == 'product_supplier_code' && $data[3] == 'product_description' && $data[4] == 'product_supplier_description' && $data[5] == 'product_supplier_price' && $data[6] == 'product_base_price' && ($data[7] == 'qty' || $data[8] == 'qty_on_order') && $data[9] == 'warehouse_location') { 
+						//if all true.. do nothing..
+						} else {
+						
                             $error_str .= 'The CSV file is not of valid format. Please see an example export for the right format.<br>';
                             break;
                         }
                     }
                 }
-                
+               
                 if ($row > 1) {
-                    if ((($num <= 6) || ($num >= 9) && ($this->input->post('db_inventory_overwrite') != '1')) || ( ($this->input->post('db_inventory_overwrite') == '1') && ($num >= 10) )) {
+                    if ( (($num == 5)||($num == 10)&&($this->input->post('db_inventory_overwrite') != '1')) || ( ($this->input->post('db_inventory_overwrite') == '1')&&($num >= 10) ) ) {
+                        //preparing import array to mcb_inventory_item_import table
+                        //0 supplier_name
+                        //1 name
+                        //2 description
+                        //3 base_price
+                        //4 qty
+                        //5 supplier_code
+                        //6 supplier_description
+                        //7 supplier_price
+                        //8 location
+                        
+                  /*
+                        if (floatval($data[1]) != 0) {
+							$data[1]=floatval ($data[1]);
+							}
+							
+							if (floatval($data[2]) != 0) {
+							$data[2]=floatval ($data[2]);
+							}
+					*/		
+							
                         //getting supplier id from supplier_name
                         //if the supplier name doesn't exist then, we will create new supplier and return its id
-                        $supplier_id = $this->getSupplierIdFromName($data[1]);
+                        $supplier_id = $this->getSupplierIdFromName($data[0]);
+						
                         if (!$supplier_id) {
                             //supplier doesn't exist, creating one
-                            $error_str .= '"' . $data[1] . '" does not exist. Creating "' . $data[1] . '".<br/>';
-                            $supplier_id = $this->createClientAsSupplier($data[1]);
+                            $error_str .= '"'.$data[0].'" does not exist. Creating "'.$data[0].'".<br/>';
+                            $supplier_id = $this->createClientAsSupplier($data[0]);
                             if ($supplier_id) {
                                 $imported_supplier_ids .= $supplier_id . ',';
                             }
                         }
-                        $duplicate_inventory = $this->is_duplicate_inventory($data[2], $supplier_id);
-                        if ((!$duplicate_inventory)) {
+						$duplicate_inventory = $this->is_duplicate_inventory($data[1],$supplier_id);
+						//if (!$duplicate_inventory) {
+							//var_dump($this->db->last_query(),$duplicate_inventory,"<br>");
+						//	}
+                        if ( (!$duplicate_inventory) ) {
                             if (!$this->insert_import_table($data)) {
                                 $error_str .= 'Something went wrong while importing in line "' . $row . '". Please make sure your csv file is valid. <br/>';
                             } else {
                                 if (!$supplier_id) {
-                                    $error_str .= 'Could not create the client as supplier "' . $data[1] . '" according to line ' . $row . ' in your csv file. Escaping this inventory row.<br/>';
+                                    $error_str .= 'Could not create the client as supplier "' . $data[0] . '" according to line ' . $row . ' in your csv file. Escaping this inventory row.<br/>';
                                     $inventory_import_fail_cnt++;
                                 } else {
                                     $imported_supplier_ids .= $supplier_id . ',';
@@ -116,18 +205,19 @@ class Mdl_Inventory_Import extends MY_Model {
                                     //now adding the inventory
                                     $inventory_id = $this->addNewInventoryItem($data, $supplier_id);
                                     if ($inventory_id) {
-                                        $error_str .= 'Added "' . $data[2] . '".<br/>';
+                                        $error_str .= 'Added "' . $data[1] . '".<br/>';
                                         $inventory_import_success_cnt++;
                                         $imported_inventory_ids .= $inventory_id . ',';
                                     } else {
-                                        //var_dump($this->is_duplicate_inventory($data[1],$supplier_id),$this->db->last_query()); exit();
+										//var_dump($this->is_duplicate_inventory($data[1],$supplier_id),$this->db->last_query()); exit();
+										
                                         $inventory_import_fail_cnt++;
-                                        $error_str .= 'Inventory "' . $data[2] . '" could not be imported of line ' . $row . ' from the csv file.<br/>';
+                                        $error_str .= 'Inventory "' . $data[1] . '" could not be imported of line ' . $row . ' from the csv file.<br/>';
                                     }
                                 }
                             }
                         } else {
-                            $error_str .= 'Updated "' . $data[2] . '".<br/>';
+                            $error_str .= 'Updated "' . $data[1] . '".<br/>';
                             //$inventory_import_fail_cnt++;
                             //now going to update the inventory
                             if ($supplier_id) { //not going to proceed if problem with either identifying or creating supplier id
@@ -148,6 +238,8 @@ class Mdl_Inventory_Import extends MY_Model {
             }
             fclose($handle);
         }
+        
+        
         $err_bkp = '';
         //if ($imported_inventory_ids != '' || $updated_inventory_str != '') {
         //add record for rollback, 
@@ -166,6 +258,9 @@ class Mdl_Inventory_Import extends MY_Model {
             $err_bkp = $this->makeUpdateImportBackupForRollback($updated_prod_array, $history_id);
         }
         //}
+
+
+
         log_message('debug', 'Imported ' . $imported_inventory_ids . ' inventories.');
         $fin_msg = 'Total inventory lines in imported csv file: ' . ($row - 2) . '<br/>'; //1 header and another indexing from 1
         if ($inventory_import_success_cnt > 0) {
@@ -180,8 +275,10 @@ class Mdl_Inventory_Import extends MY_Model {
         }
         //save the import log to database, session flash can not handle big debug message
         $this->updateInventoryImportLogMessage($history_id, $fin_msg);
+        
         //saving inventory_import_history
         $this->updateInventoryImportHistory($history_id);
+
         return $history_id;
     }
     
@@ -258,16 +355,15 @@ class Mdl_Inventory_Import extends MY_Model {
         
         if(count($data) >= 9){
             $data_i = array(
-                'inventory_type' => 'Part',
                 'supplier_id' => $duplicate_inventory->supplier_id,
-                'name' => $data[2],
-                'supplier_code' => $data[3],
-                'description' => $data[4],
-                'supplier_description' => $data[5],
-                'supplier_price' => $data[6],
-                'base_price' => $data[7],
-                'qty' => $data[8],
-                'location' => $data[10],
+                'name' => $data[1],
+                'supplier_code' => $data[2],
+                'description' => $data[3],
+                'supplier_description' => $data[4],
+                'supplier_price' => $data[5],
+                'base_price' => $data[6],
+                'qty' => $data[7],
+                'location' => $data[9],
                 'inevntory_last_changed' => date('Y-m-d H:i:s'),
                 'inventory_type' => '0',
                 'is_arichved'=>'0'
@@ -277,22 +373,24 @@ class Mdl_Inventory_Import extends MY_Model {
                     unset($data_i['qty']);
                 }
             }
-        } elseif(count($data) <= 6) {
+        } elseif(count($data) <= 5) {
             
 //            echo 'sssssss';
             $data_i = array(
-                'inventory_type' => 'Product Group',
                 'supplier_id' => $duplicate_inventory->supplier_id,
-                'name' => $data[2],
-                'description' => $data[3],
-                'base_price' => $data[4],
-                'location' => $data[5],
+                'name' => $data[1],
+                'description' => $data[2],
+                'base_price' => $data[3],
+                'location' => $data[4],
                 'inevntory_last_changed' => date('Y-m-d H:i:s'),
                 'inventory_type' => '1',
                 'is_arichved'=>'0'
             );
+			
+			
         }
-        
+		
+	
         $pos = strpos($data_i['name'], '{mm}');	
         if ($pos) {
             $data_i['use_length'] = '1';
@@ -313,13 +411,13 @@ class Mdl_Inventory_Import extends MY_Model {
         $res = $this->db->update('mcb_inventory_item', $data_i);
         
 		if(count($data) >= 9){
-			$sign = ($data[8] >= $duplicate_inventory->qty) ? '+' : '-';
-			if ($data[8] == $duplicate_inventory->qty)
+			$sign = ($data[7] >= $duplicate_inventory->qty) ? '+' : '-';
+			if ($data[7] == $duplicate_inventory->qty)
 				$sign = '';
 			//save the history
 			$history = array(
 				'inventory_id' => $inventory_id,
-				'history_qty' => $sign . abs($data[8] - $duplicate_inventory->qty),
+				'history_qty' => $sign . abs($data[7] - $duplicate_inventory->qty),
 				'notes' => 'Import',
 				'user_id' => $this->session->userdata('user_id'),
 				'created_at' => date('Y-m-d H:i:s'),
@@ -352,26 +450,26 @@ class Mdl_Inventory_Import extends MY_Model {
             
             $dataI = array(
                 'supplier_id' => $supplier_id,
-                'name' => $data[2],
-                'supplier_code' => $data[3],
-                'description' => $data[4],
-                'supplier_description' => $data[5],
-                'supplier_price' => $data[6],
-                'base_price' => $data[7],
-                'qty' => $data[8],
-                'location' => $data[10],
+                'name' => $data[1],
+                'supplier_code' => $data[2],
+                'description' => $data[3],
+                'supplier_description' => $data[4],
+                'supplier_price' => $data[5],
+                'base_price' => $data[6],
+                'qty' => $data[7],
+                'location' => $data[9],
                 'inevntory_last_changed' => date('Y-m-d H:i:s'),
                 'inventory_type' => '0',
                 'is_arichved'=>'0'
             );
             
-        } elseif(count($data) <= 6) {
+        } elseif(count($data) <= 5) {
             $dataI = array(
                 'supplier_id' => $supplier_id,
-                'name' => $data[2],
-                'description' => $data[3],
-                'base_price' => $data[4],
-                'location' => $data[5],
+                'name' => $data[1],
+                'description' => $data[2],
+                'base_price' => $data[3],
+                'location' => $data[4],
                 'inevntory_last_changed' => date('Y-m-d H:i:s'),
                 'inventory_type' => '1',
                 'is_arichved'=>'0'
@@ -401,7 +499,7 @@ class Mdl_Inventory_Import extends MY_Model {
             //save the history
             $history = array(
                 'inventory_id' => $inventory_id,
-                'history_qty' => $sign . $data[8],
+                'history_qty' => $sign . $data[7],
                 'notes' => 'Import ',
                 'user_id' => $this->session->userdata('user_id'),
                 'created_at' => date('Y-m-d H:i:s'),
@@ -495,15 +593,15 @@ class Mdl_Inventory_Import extends MY_Model {
         //8 location
 
         $data = array(
-            'supplier_name' => $data[1],
-            'name' => $data[2],
-            'description' => $data[3],
-            'base_price' => $data[4],
-            'qty' => $data[5],
-            'supplier_code' => $data[6],
-            'supplier_description' => $data[7],
-            'supplier_price' => $data[8],
-            'location' => $data[9],
+            'supplier_name' => $data[0],
+            'name' => $data[1],
+            'description' => $data[2],
+            'base_price' => $data[3],
+            'qty' => $data[4],
+            'supplier_code' => $data[5],
+            'supplier_description' => $data[6],
+            'supplier_price' => $data[7],
+            'location' => $data[8],
             'imported_at' => date('Y-m-d H:i:s'),
         );
         return $this->db->insert('mcb_inventory_import', $data);
@@ -621,7 +719,6 @@ class Mdl_Inventory_Import extends MY_Model {
 //        die;
         if ($inventory_type == '0') {
             $heading = array(
-                'inventory_type',
                 'supplier_name',
                 'product_name',
                 'product_supplier_code',
@@ -635,7 +732,6 @@ class Mdl_Inventory_Import extends MY_Model {
             );
         } else {
             $heading = array(
-                'inventory_type',
                 'supplier_name',
                 'name',
                 'description',
@@ -661,7 +757,6 @@ class Mdl_Inventory_Import extends MY_Model {
         foreach ($q->result() as $inventory) {
             if ($inventory_type == '0') {
                 $line = array(
-                    prepare_csv_export_string('Part'),
                     prepare_csv_export_string($inventory->supplier_name),
                     prepare_csv_export_string($inventory->name),
                     prepare_csv_export_string($inventory->supplier_code),
@@ -677,7 +772,6 @@ class Mdl_Inventory_Import extends MY_Model {
             } else {
 
                 $line = array(
-                    prepare_csv_export_string('Product Group'),
                     prepare_csv_export_string($inventory->supplier_name),
                     prepare_csv_export_string($inventory->name),
                     prepare_csv_export_string(str_replace("\n", " ", $inventory->description)),
@@ -736,7 +830,6 @@ class Mdl_Inventory_Import extends MY_Model {
         if ($this->input->post('type') == 0) {
             
             $heading = array(
-                'inventory_type',
                 'supplier_name',
                 'product_name',
                 'product_supplier_code',
@@ -752,7 +845,6 @@ class Mdl_Inventory_Import extends MY_Model {
         } else {
 
             $heading = array(
-                'inventory_type',
                 'supplier_name',
                 'name',
                 'description',
@@ -781,7 +873,6 @@ class Mdl_Inventory_Import extends MY_Model {
 
             if ($this->input->post('type') == 0) {
                 $line = array(
-                    prepare_csv_export_string('Part'),
                     prepare_csv_export_string($inventory->supplier_name),
                     prepare_csv_export_string($inventory->name),
                     prepare_csv_export_string($inventory->supplier_code),
@@ -797,7 +888,6 @@ class Mdl_Inventory_Import extends MY_Model {
             } else {
 
                 $line = array(
-                    prepare_csv_export_string('Product Group'),
                     prepare_csv_export_string($inventory->supplier_name),
                     prepare_csv_export_string($inventory->name),
                     prepare_csv_export_string(str_replace("\n", " ", $inventory->description)),
@@ -1099,10 +1189,11 @@ class Mdl_Inventory_Import extends MY_Model {
                 $data = $temp;
 		
                 if ($row == 1) {
-                    if ($data[1] == 'supplier_name' || $data[2] == 'product_name' || $data[3] == 'product_supplier_code' || $data[4] == 'product_description' || $data[5] == 'product_supplier_description' || $data[6] == 'product_supplier_price' || $data[7] == 'product_base_price' || $data[8] == 'qty' || $data[8] == 're-order_qty' || $data[9] == 'qty_on_order' || $data[10] == 'warehouse_location') {
+                    //if ($data[1] != 'product_name' || $data[0] != 'supplier_name' || $data[2] != 'product_supplier_code' || $data[3] != 'product_description' || $data[4] != 'product_supplier_description' || $data[5] != 'stock_qty' || $data[6] != 'product_supplier_price' || $data[9] != 'warehouse_location') {
+                    if ($data[0] == 'supplier_name' || $data[1] == 'product_name' || $data[2] == 'product_supplier_code' || $data[3] == 'product_description' || $data[4] == 'product_supplier_description' || $data[5] == 'product_supplier_price' || $data[6] == 'product_base_price' || $data[7] == 'qty' || $data[7] == 're-order_qty' || $data[8] == 'qty_on_order' || $data[9] == 'warehouse_location') {
                         // $error_str .= 'The CSV file is not of valid format. Please see an example export for the right format.';
                         $fileFormate = TRUE;
-                    }else if($data[1] == 'supplier_name' || $data[2] == 'name' || $data[3] == 'description' || $data[4] == 'base_price' || $data[5] == 'location'){
+                    }else if($data[0] == 'supplier_name' || $data[1] == 'name' || $data[2] == 'description' || $data[3] == 'base_price' || $data[3] == 'location'){
                         $error_str .= 'The CSV file is not of valid format. Please see an example export for the right format.';
                         $fileFormate = TRUE;
                     }else{
@@ -1114,9 +1205,9 @@ class Mdl_Inventory_Import extends MY_Model {
                 $num = count($data);
                 if ($row > 1) {
                     if ($num >= 8) {
-                        $csv_inventory_part[] = $data[2];
+                        $csv_inventory_part[] = $data[1];
                     }elseif($num <= 6 ){
-                        $csv_inventory_group[] = $data[2];       
+                        $csv_inventory_group[] = $data[1];       
                     }
                 }
                 $row++;
