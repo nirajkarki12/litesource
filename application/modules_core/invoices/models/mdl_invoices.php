@@ -1582,8 +1582,8 @@ class Mdl_Invoices extends MY_Model {
                         . "WHERE pi.product_id = '".$item->product_id."' AND pi.inventory_id != '0'";
                 $inventory_items = $this->common_model->query_as_object($sql2);
                 if (sizeof($inventory_items) > 0) {
-                    foreach ($inventory_items as $item) {
-                        $numProdFormed = (int) $item->s_qty / $item->s_inventory_qty;
+                    foreach ($inventory_items as $items) {
+                        $numProdFormed = (int) $items->s_qty / $items->s_inventory_qty;
                         if ($lesserQtyInventory > $numProdFormed) {
                             $lesserQtyInventory = $numProdFormed;
                         }
