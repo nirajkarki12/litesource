@@ -151,7 +151,6 @@ class Mdl_Inventory_Import extends MY_Model {
                         //$duplicate_inventory = $this->is_duplicate_inventory($data[3]);
                         $duplicate_inventory = $this->is_duplicate_sku($c_data['sku']);
 
-
                         if ((!$duplicate_inventory)) {
                             if (!$this->insert_import_table($data, $c_data)) {
                                 $error_str .= 'Something went wrong while importing in line "' . $row . '". Please make sure your csv file is valid. <br/>';
@@ -164,15 +163,21 @@ class Mdl_Inventory_Import extends MY_Model {
                                 }
                                 if ($supplier_id && $category_id) {
                                     //now adding the inventory
-                                    if (($c_data['sku'] == '') || ($c_data['sku'] == 0)) {
-                                        //add item and its stock 
+
                                         $inventory_id = $this->addNewInventoryItem($data, $supplier_id, $c_data, $category_id);
-                                        if ($inventory_id) {
+                                        $t_sku = "SKU-{$inventory_id}";
+                                        $sku_arrs[$t_sku] = $inventory_id;
+
+                                        //$inventory_import_fail_cnt++;
+                                        //$error_str .= 'Inventory  of sku "' . $c_data['sku'] . '" does not exists.<br/>';
+                                        // $t_sku = $c_data['sku'];
+                                        // $sku_arrs[$t_sku] = str_replace('SKU-', '', $c_data['sku']);
+                                        //add item and its stock 
+                                        
+                                        //if ($inventory_id) {
                                             $error_str .= 'Added "' . $c_data['name'] . '".<br/>';
                                             if ($c_data['inventory_type'] == 'Grouped') {
-
-                                                $t_sku = "SKU-{$inventory_id}";
-                                                $sku_arrs[$t_sku] = $inventory_id;
+                                                
                                                 $pro_i = $inventory_id;
                                                 $csv_rel_invs_arr = array();
                                                 $csv_rel_invs_qty_arr = array();
@@ -206,19 +211,17 @@ class Mdl_Inventory_Import extends MY_Model {
 
                                             $inventory_import_success_cnt++;
                                             $imported_inventory_ids .= $inventory_id . ',';
-                                        } else {
+                                        //} else {
                                             //var_dump($this->is_duplicate_inventory($data[1],$supplier_id),$this->db->last_query()); exit();
-                                            $inventory_import_fail_cnt++;
+                                        //    $inventory_import_fail_cnt++;
                                             //$error_str .= 'Inventory "' . $c_data['name'] . '" could not be imported of line ' . $row . ' from the csv file.<br/>';
-                                            $error_str .= 'Inventory "' . $c_data['name'] . '" could not be imported of line ' . $row . ' from the csv file (May be you are trying duplicate entry supplier and cat#).<br/>';
-                                        }
-                                    } else {
-                                        $inventory_import_fail_cnt++;
-                                        $error_str .= 'Inventory  of sku "' . $c_data['sku'] . '" does not exists.<br/>';
-                                    }
+                                        //    $error_str .= 'Inventory "' . $c_data['name'] . '" could not be imported of line ' . $row . ' from the csv file (May be you are trying duplicate entry supplier and cat#).<br/>';
+                                        //}
+                                    
                                 }
                             }
                         } else {
+                            // echo "<pre>";print_r($supplier_id);die;
 
                             $error_str .= 'Updated "' . $c_data['name'] . '".<br/>';
                             //$inventory_import_fail_cnt++;
@@ -498,6 +501,10 @@ class Mdl_Inventory_Import extends MY_Model {
             'category_id' => $category_id,
             'quote_status'=> ( strcasecmp($data[13], 'Yes')== 0 ?'1':'0'),
         );
+
+        if(isset($data[1]) && $data[1] && preg_match('/\SKU-\b/', $data[1])) {
+            $dataI['inventory_id'] = str_replace('SKU-', '', $data[1]);
+        }
 
         //USES dataI 
         $pos = strpos($dataI['name'], '{mm}');
