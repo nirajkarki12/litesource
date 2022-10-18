@@ -43,7 +43,7 @@ $active_record = TRUE;
 
 $db['default']['hostname'] = 'localhost';
 $db['default']['username'] = 'root';
-$db['default']['password'] = 'ec1cf629bfc0636692482d0ba32bf77a5bc374838f1e990a';
+$db['default']['password'] = 'litesource';
 $db['default']['database'] = 'tt_litesource_invoice';
 $db['default']['dbdriver'] = 'mysql';
 $db['default']['dbprefix'] = '';

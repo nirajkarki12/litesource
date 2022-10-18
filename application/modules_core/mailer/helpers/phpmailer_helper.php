@@ -12,6 +12,18 @@ function phpmail_send($from, $to, $subject, $message, $attachment_path = NULL, $
 
     $mail->IsHtml();
 
+//    echo $CI->mdl_mcb_data->setting('email_protocol');    echo '<br>';
+//    echo $CI->mdl_mcb_data->setting('smtp_host');    echo '<br>';
+//    echo $CI->mdl_mcb_data->setting('smtp_user');    echo '<br>';
+//    echo $CI->mdl_mcb_data->setting('smtp_pass');    echo '<br>';
+//    echo $CI->mdl_mcb_data->setting('smtp_port');    echo '<br>';
+//    
+//    
+//    print_r($to);    echo '<br>';
+//    
+//    die;
+    
+    
     if ($CI->mdl_mcb_data->setting('email_protocol') == 'smtp') {
 
         $mail->IsSMTP();

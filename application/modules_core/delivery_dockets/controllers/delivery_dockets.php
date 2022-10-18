@@ -19,7 +19,6 @@ class Delivery_Dockets extends Admin_Controller {
         $this->_post_handler();
 
         $this->redir->set_last_index();
-
         $params = array(
             'paginate' => TRUE,
             'limit' => $this->mdl_mcb_data->setting('results_per_page'),
@@ -65,6 +64,32 @@ class Delivery_Dockets extends Admin_Controller {
         $docket_id = uri_assoc('docket_id');
 
         if ($docket_id) {
+            
+//            $sql = "SELECT dd.`docket_number`, dd.`docket_delivery_status` ,ddi.`docket_item_qty`, ii.`product_id`, ii.`item_name`"
+//                    . " FROM `mcb_delivery_docket_items` ddi"
+//                    . " JOIN `mcb_delivery_dockets` dd ON dd.`docket_id` = ddi.`docket_id`"
+//                    . " JOIN `mcb_invoice_items` ii ON ddi.`invoice_item_id` = ii.`invoice_item_id`"
+//                    . " WHERE dd.`docket_id` = '$docket_id'";
+//            $qry = $this->db->query($sql);
+//            $data = $qry->row($qry);
+//            
+//            if($data) {
+//                $qty = '0';
+//                if($data->docket_delivery_status == '1') {
+//                    $qty = $data->docket_item_qty;
+//                    $updateQry = "UPDATE `mcb_inventory_item` SET `qty` = `qty` + $data->docket_item_qty WHERE `inventory_id` = '$data->product_id'";
+//                    $this->db->query($updateQry);
+//                }
+//                
+//                $this->db->insert('mcb_inventory_history', [
+//                    'history_id' => '0',
+//                    'inventory_id' => $data->product_id,
+//                    'history_qty' => $qty,
+//                    'notes' => "Deleted Delivery Docket ($data->item_name)",
+//                    'user_id' => $this->session->userdata('user_id'),
+//                    'created_at' => date('Y-m-d H:i:s')
+//                ]);
+//            }
 
             $this->mdl_delivery_dockets->delete($docket_id);
         }
@@ -90,6 +115,7 @@ class Delivery_Dockets extends Admin_Controller {
                     'clients/mdl_contacts',
                     'addresses/mdl_addresses',
                     'projects/mdl_projects',
+                    'invoices/mdl_invoices',
                 //'users/mdl_users'
                 )
         );
@@ -119,9 +145,10 @@ class Delivery_Dockets extends Admin_Controller {
             'tab_index' => $tab_index,
             'first_docket' => $this->mdl_delivery_dockets->check_if_first_docket($docket_id,$docket->invoice_id),
             'docket_payments' => $this->common_model->query_as_array('SELECT * FROM mcb_delivery_docket_payment WHERE docket_id = "'.$docket_id.'" ORDER BY id DESC'),
+            'main_invoice_status'=>$this->mdl_invoices->getInvoiceStatusId($docket->invoice_id)
         );
         
-//        echo "<pre>";
+//        echo '<pre>';
 //        print_r($data);
 //        die;
         
@@ -396,77 +423,6 @@ class Delivery_Dockets extends Admin_Controller {
         }
     }
     
-//    
-//    public function finalizedelivery() {
-//        
-//        $docket_id = uri_assoc('docket_id');
-//        $docData = $this->mdl_delivery_dockets->get_Row('mcb_delivery_dockets',array('docket_id'=>$docket_id));
-//        $invoice_id = $docData->invoice_id;
-//        $this->mdl_delivery_dockets->update('mcb_delivery_dockets',array('docket_delivery_status'=>'1'),array('docket_id'=>$docket_id));
-//        
-//        $delivery_docket_items1 = $this->mdl_delivery_dockets->get_Where('mcb_delivery_docket_items',array('docket_id'=>$docket_id));
-//        $this->load->helper('mcb_app');
-//        foreach ($delivery_docket_items1 as $dta) {   
-//            
-//            $invoice_items1 = $this->mdl_delivery_dockets->get_Row('mcb_invoice_items',array('invoice_item_id'=>$dta['invoice_item_id']));
-//            $product_id = $invoice_items1->product_id;          
-//            $products_inventory1 = $this->mdl_delivery_dockets->get_Where('mcb_products_inventory',array('product_id'=>$product_id));
-//            foreach ($products_inventory1 as $prodct_inmentry) {
-//                
-//                $quqntity = $prodct_inmentry['inventory_qty']*$dta['docket_item_qty'];
-//                
-//                $inventory_item1 = $this->mdl_delivery_dockets->get_Row('mcb_inventory_item',array('inventory_id'=>$prodct_inmentry['inventory_id']));
-//                $inventory_item1->qty;
-//                $qty = $inventory_item1->qty - $quqntity;
-//                $this->mdl_delivery_dockets->update('mcb_inventory_item',array('qty'=>$qty),array('inventory_id'=>$prodct_inmentry['inventory_id'])); 
-//                
-//                udpate_open_order_qty($prodct_inmentry['inventory_id']);
-//            }               
-//        }
-//        $this->session->set_flashdata('custom_success', 'Successfully Delevered.');
-//        redirect($this->session->userdata('last_index'));
-//        
-//    }
-//    
-//    
-//    
-//    public function canceldelivery() {
-//        
-//        
-//        $docket_id = uri_assoc('docket_id');
-//        
-//        $this->mdl_delivery_dockets->update('mcb_delivery_dockets',array('docket_delivery_status'=>'0'),array('docket_id'=>$docket_id));
-//        
-//        $docData = $this->mdl_delivery_dockets->get_Row('mcb_delivery_dockets',array('docket_id'=>$docket_id));
-//        $invoice_id = $docData->invoice_id;
-//        
-//        $delivery_docket_items1 = $this->mdl_delivery_dockets->get_Where('mcb_delivery_docket_items',array('docket_id'=>$docket_id));
-//        $this->load->helper('mcb_app');
-//        foreach ($delivery_docket_items1 as $dta) {   
-//            
-//            $invoice_items1 = $this->mdl_delivery_dockets->get_Row('mcb_invoice_items',array('invoice_item_id'=>$dta['invoice_item_id']));
-//            $product_id = $invoice_items1->product_id;          
-//            $products_inventory1 = $this->mdl_delivery_dockets->get_Where('mcb_products_inventory',array('product_id'=>$product_id));
-//            foreach ($products_inventory1 as $prodct_inmentry) {
-//                
-//                $quqntity = $prodct_inmentry['inventory_qty']*$dta['docket_item_qty'];
-//                
-//                $inventory_item1 = $this->mdl_delivery_dockets->get_Row('mcb_inventory_item',array('inventory_id'=>$prodct_inmentry['inventory_id']));
-//                $inventory_item1->qty;
-//                $qty = $inventory_item1->qty + $quqntity;
-//                $this->mdl_delivery_dockets->update('mcb_inventory_item',array('qty'=>$qty),array('inventory_id'=>$prodct_inmentry['inventory_id']));  
-//                
-//                udpate_open_order_qty($prodct_inmentry['inventory_id']);
-//            }
-//        }
-//        $this->session->set_flashdata('custom_success', 'Delevery Cancelled Successfully.');
-//        redirect($this->session->userdata('last_index'));
-//    }
-//    
-    
-    
-    
-    
     public function finalizedelivery() {
         
         $docket_id = uri_assoc('docket_id');
@@ -479,7 +435,10 @@ class Delivery_Dockets extends Admin_Controller {
         $delivery_docket_items1 = $this->mdl_delivery_dockets->get_Where('mcb_delivery_docket_items',array('docket_id'=>$docket_id));
         foreach ($delivery_docket_items1 as $dta) {   
             
+            
+            
             $invoice_items1 = $this->mdl_delivery_dockets->get_Row('mcb_invoice_items',array('invoice_item_id'=>$dta['invoice_item_id']));
+           
             $product_id = $invoice_items1->product_id;     
             $item_length = $invoice_items1->item_length;
             $products_inventory1 = $this->mdl_delivery_dockets->get_Where('mcb_products_inventory',array('product_id'=>$product_id));
@@ -487,9 +446,12 @@ class Delivery_Dockets extends Admin_Controller {
             foreach ($products_inventory1 as $prodct_inmentry) {
                 // $quqntity = $prodct_inmentry['inventory_qty']*$dta['docket_item_qty'];
                 $quqntity = $prodct_inmentry['inventory_qty']*$dta['docket_item_qty'];
+                $ordered_qty = $prodct_inmentry['inventory_qty']*$invoice_items1->item_qty;
+                
                 $inventory_item1 = $this->mdl_delivery_dockets->get_Row('mcb_inventory_item',array('inventory_id'=>$prodct_inmentry['inventory_id']));
                 if( (($inventory_item1->use_length) == '1') && ($item_length > '0')  ){
                     $quqntity = $quqntity * $item_length;
+                    $ordered_qty = $ordered_qty * $item_length;
                     if($item_length == '-1'){
                         $product_name = str_replace('{mm}', '-Per-Metre', $product_name);
                     }else{
@@ -501,13 +463,30 @@ class Delivery_Dockets extends Admin_Controller {
                 $opn_order_qty = $inventory_item1->open_order_qty + $quqntity;
                 $this->mdl_delivery_dockets->update('mcb_inventory_item',array('qty'=>$qty, 'open_order_qty'=>$opn_order_qty),array('inventory_id'=>$prodct_inmentry['inventory_id']));   
                 
+                /* update stock 
+                   qty = qty-finalisedqty
+                   pending = pending-orderedqty */
+                //$inventory_stock = $this->mdl_delivery_dockets->get_Row('mcb_item_stock',array('inventory_id'=>$prodct_inmentry['inventory_id']),'stock_id','desc','1');
+//                $this->mdl_delivery_dockets->insert('mcb_item_stock',array(
+//                                                 
+//                                                     'qty_pending'=>-$quqntity,
+//                                                    'qty_update_source'=>'docket-delivery',
+//                                                    'relevent_item_field'=>'docket_id',
+//                                                       'relevent_item_id'=>$docket_id,
+//                                                    'inventory_id'=>$prodct_inmentry['inventory_id']));  
+                
+                //****pending inv*****
+                $sql = "update mcb_item_stock set status = '1' where inventory_id='".$prodct_inmentry['inventory_id']."' AND relevent_item_id = '".$dta['docket_item_id']."' AND relevent_item_field='docket_item_id'";
+                $this->db->query($sql);
+                //end ****pending inv*****
+                
                 //going to put history if the delivery is finalized
                 // -ve $quqntity
                 $data = array(
                     'history_id' => '0',
                     'inventory_id' => $prodct_inmentry['inventory_id'],
                     'history_qty' => '-'.$quqntity,
-                    'notes' => 'Finalised Delivery <a href="'.site_url('delivery_dockets/edit/docket_id/'.$docket_id).'">Docket '.$invoice_number.'.'.$docData->docket_number.' ('.$product_name.')</a>',
+                    'notes' => 'Finalised Delivery <a href="_SITE_URL_/delivery_dockets/edit/docket_id/'.$docket_id.'">Docket '.$invoice_number.'.'.$docData->docket_number.' ('.$product_name.')</a>',
                     'user_id' => $this->session->userdata('user_id'),
                     'created_at' => date('Y-m-d H:i:s')
                 );
@@ -515,6 +494,9 @@ class Delivery_Dockets extends Admin_Controller {
                 $this->db->insert('mcb_inventory_history',$data);
             }               
         }
+        $this->load->model('inventory/mdl_inventory_item');
+        $this->mdl_inventory_item->maintain_group_product_quantity($invoice_id, true);
+
         $this->session->set_flashdata('custom_success', 'Successfully delivered.');
         $this->session->set_flashdata('tab_index', '5');
         redirect(site_url('invoices/edit/invoice_id/'.$invoice_id));    
@@ -527,7 +509,6 @@ class Delivery_Dockets extends Admin_Controller {
         $docData = $this->mdl_delivery_dockets->get_Row('mcb_delivery_dockets',array('docket_id'=>$docket_id));
         $invoice_id = $docData->invoice_id;
         $invoice_number = $this->mdl_delivery_dockets->get_Row('mcb_invoices',array('invoice_id'=>$invoice_id))->invoice_number;
-        
         $this->mdl_delivery_dockets->update('mcb_delivery_dockets',array('docket_delivery_status'=>'0'),array('docket_id'=>$docket_id));
         $this->mdl_invoices->getInvoiceStatusId($invoice_id);
         $delivery_docket_items1 = $this->mdl_delivery_dockets->get_Where('mcb_delivery_docket_items',array('docket_id'=>$docket_id));
@@ -543,6 +524,8 @@ class Delivery_Dockets extends Admin_Controller {
                 
                 // $quqntity = $prodct_inmentry['inventory_qty']*$dta['docket_item_qty'];
                 $quqntity = $prodct_inmentry['inventory_qty']*$dta['docket_item_qty'];
+                $ordered_quqntity = $prodct_inmentry['inventory_qty']*$invoice_items1->item_qty;
+           
                 
                 $inventory_item1 = $this->mdl_delivery_dockets->get_Row('mcb_inventory_item',array('inventory_id'=>$prodct_inmentry['inventory_id']));
                 if( (($inventory_item1->use_length) == '1') && ($item_length > '0') ){
@@ -559,19 +542,41 @@ class Delivery_Dockets extends Admin_Controller {
                 $opn_order_qty = $inventory_item1->open_order_qty - $quqntity;
                 $this->mdl_delivery_dockets->update('mcb_inventory_item',array('qty'=>$qty, 'open_order_qty'=>$opn_order_qty),array('inventory_id'=>$prodct_inmentry['inventory_id']));   
                 
+                //change stock
+            
+              //  $stock_items = $this->mdl_delivery_dockets->get_Row('mcb_item_stock',array('inventory_id'=>$prodct_inmentry['inventory_id']),'stock_id','desc','1');
+              //  $qty = $stock_items->qty + $quqntity;
+                $pending_qty = $quqntity ;
+                
+              
+//                $this->mdl_delivery_dockets->insert('mcb_item_stock',array(
+//                
+//                    'qty_pending'=>$pending_qty,
+//                    'qty_update_source'=>'canceled-docket-delivery',
+//                    'relevent_item_field'=>'docket_id',
+//                    'relevent_item_id'=>$docket_id,
+//                    'inventory_id'=>$prodct_inmentry['inventory_id'])); 
+                //****pending inv*****
+                $sql = "update mcb_item_stock set status = '0' where inventory_id='".$prodct_inmentry['inventory_id']."' AND relevent_item_id = '".$dta['docket_item_id']."' AND relevent_item_field='docket_item_id'";
+                $this->db->query($sql);
+                //end ****pending inv*****
+                
                 //going to put history if the delivery is cancelled
                 // +ve $quqntity
                 $data = array(
                     'history_id' => '0',
                     'inventory_id' => $prodct_inmentry['inventory_id'],
                     'history_qty' => $quqntity,
-                    'notes' => 'Canceled Delivery <a href="'.site_url('delivery_dockets/edit/docket_id/'.$docket_id).'">Docket '.$invoice_number.'.'.$docData->docket_number.' ('.$product_name.')</a>',
+                    'notes' => 'Canceled Delivery <a href="_SITE_URL_/delivery_dockets/edit/docket_id/'.$docket_id.'">Docket '.$invoice_number.'.'.$docData->docket_number.' ('.$product_name.')</a>',
                     'user_id' => $this->session->userdata('user_id'),
                     'created_at' => date('Y-m-d H:i:s')
                 );
                 $this->db->insert('mcb_inventory_history',$data);
             }              
         }
+        $this->load->model('inventory/mdl_inventory_item');
+        $this->mdl_inventory_item->maintain_group_product_quantity($invoice_id, true);
+
         $this->session->set_flashdata('custom_success', 'Delevery Cancelled Successfully.');
         $this->session->set_flashdata('tab_index', '5');
         redirect(site_url('invoices/edit/invoice_id/'.$invoice_id));
@@ -580,22 +585,25 @@ class Delivery_Dockets extends Admin_Controller {
     
     function do_paid() {
         $docket_id = uri_assoc('docket_id');
+        $this->mdl_delivery_dockets->mark_as_paid_on_history($docket_id);
         $this->mdl_delivery_dockets->update('mcb_delivery_dockets',array('paid_status'=>'1'),array('docket_id'=>$docket_id));
         $this->docketPriceAdd();
         $invoice_id = $this->mdl_invoices->get_row('mcb_delivery_dockets', array('docket_id'=>$docket_id))->invoice_id;     
         $this->mdl_invoices->getInvoiceStatusId($invoice_id);
-        // redirect($this->session->userdata('last_index'));
+
         $this->session->set_flashdata('tab_index', 5);
         redirect(site_url('invoices/edit/invoice_id/'.$invoice_id));    
     }
     
     function do_unpaid() {
         $docket_id = uri_assoc('docket_id');
+        $this->mdl_delivery_dockets->mark_as_unpaid_on_history($docket_id);
         $this->mdl_delivery_dockets->update('mcb_delivery_dockets',array('paid_status'=>'0'),array('docket_id'=>$docket_id));
         $this->docketPriceAdd();
         $invoice_id = $this->mdl_invoices->get_row('mcb_delivery_dockets', array('docket_id'=>$docket_id))->invoice_id;        
         $this->mdl_invoices->getInvoiceStatusId($invoice_id);
         // redirect($this->session->userdata('last_index'));
+
         $this->session->set_flashdata('tab_index', 5);
         redirect(site_url('invoices/edit/invoice_id/'.$invoice_id));
     }
@@ -610,6 +618,7 @@ class Delivery_Dockets extends Admin_Controller {
             $this->session->set_flashdata('tab_index', 4);
             redirect(site_url('clients/details/client_id/'.$clent_id));
         }
+
         $this->session->set_flashdata('tab_index', 5);
         redirect(site_url('invoices/edit/invoice_id/'.$invoice_id));
     }
@@ -623,6 +632,7 @@ class Delivery_Dockets extends Admin_Controller {
             $this->session->set_flashdata('tab_index', 4);
             redirect(site_url('clients/details/client_id/'.$clent_id));
         }
+
         $this->session->set_flashdata('tab_index', 5);
         redirect(site_url('invoices/edit/invoice_id/'.$invoice_id));
     }
@@ -646,7 +656,7 @@ class Delivery_Dockets extends Admin_Controller {
             
             $r2 = $this->mdl_delivery_dockets->query_array($sql);
             $key = 'total_price_with_tax';
-            $sum_with_tax = array_sum(array_column($r2,$key));    
+            $sum_with_tax = round(array_sum(array_column($r2,$key)), 5);
             $this->mdl_delivery_dockets->update('mcb_delivery_dockets', array('price_with_tax'=>$sum_with_tax), array('docket_id'=>$value['docket_id']));
         }
         //echo "completed";
@@ -732,6 +742,58 @@ class Delivery_Dockets extends Admin_Controller {
                     ), 
                     array('docket_id'=>$value->docket_id));
         }
+        echo "success";
+        exit;
+    }
+    
+    function run_once() {
+        
+        $sql = "SELECT * FROM `mcb_delivery_dockets` WHERE `paid_status` = '1'";
+        $allDelDoc = $this->mdl_delivery_dockets->query($sql);
+        
+        foreach ($allDelDoc as $value) {
+            
+            $inv = $this->mdl_delivery_dockets->get_docket_owing_amount_status($value->docket_id);
+            $inv->docket_id = $value->docket_id;
+            if( $inv->owing_amount != '0.00' ){
+                $data = array(
+                    'docket_id' => $inv->docket_id,
+                    'note' => 'Marked as paid.',
+                    'amount_entered' => $inv->owing_amount,
+                    'amount_log' => $inv->owing_amount,
+                    'time' => time(),
+                    'user_name'=> 'System',
+                    'mark_as_paid'=>'1'
+                );
+                $this->db->trans_start();
+                $this->db->insert('mcb_delivery_docket_payment', $data);
+                $this->db->trans_complete();
+            }
+        }
+        echo "success";
+        exit;
+    }
+    
+    function run_once_qty_len() {
+        
+        $sql = "SELECT 
+            di.docket_item_id, 
+            di.invoice_item_id, 
+            ii.item_length AS docket_item_length
+            FROM `mcb_delivery_docket_items` AS di 
+            LEFT JOIN mcb_invoice_items AS ii ON di.invoice_item_id = ii.invoice_item_id 
+            WHERE ii.item_length != ''";
+        
+        $allDelDoc_itm = $this->mdl_delivery_dockets->query($sql);
+        $c= 0;
+        foreach ($allDelDoc_itm as $key => $di) {
+            $this->db->trans_start();
+            $this->db->update('mcb_delivery_docket_items',array('docket_item_length'=>$di->docket_item_length),array('docket_item_id'=>$di->docket_item_id)); 
+            $this->db->trans_complete();
+            $c++;
+        }
+        echo $c;
+        echo '<br>';
         echo "success";
         exit;
     }

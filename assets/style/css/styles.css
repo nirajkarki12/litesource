@@ -4,3 +4,76 @@
 @import url("grid.css");
 @import url("messages.css");
 @import url("pagination.css");
+
+
+
+    /*------------- lite popup start --------------*/
+.lite_model {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 50px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0, 0, 0, 0.74); /* Black w/ opacity */
+}
+.lite_model-content {
+    position: relative;
+    background-color: #fefefe;
+    margin: auto;
+    padding: 0;
+    border: 1px solid #888;
+    width: 40%;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    -webkit-animation-name: animatetop;
+    -webkit-animation-duration: 0.4s;
+    animation-name: animatetop;
+    animation-duration: 0.4s;
+    border-radius: 5px;
+}
+@-webkit-keyframes animatetop {
+    from {top:-300px; opacity:0} 
+    to {top:0; opacity:1}
+}
+@keyframes animatetop {
+    from {top:-300px; opacity:0}
+    to {top:0; opacity:1}
+}
+.lite_model_close {
+    color: #2c715c;
+    float: right;
+    font-size: 31px;
+    font-weight: 900;
+    margin: -10px 11px;
+}
+.lite_model_close:hover,
+.lite_model_close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+.lite_model-header {
+    padding: 15px;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 18px;
+}
+.lite_model-body {
+    padding: 12px 16px;
+}
+/*.lite_model-body p{
+    margin: 11px 0px;
+}*/
+.lite_model-footer {
+    padding: 8px 0px 0px 0px;
+    /*background-color: #0000000d;*/
+    text-align: center;
+}
+/*------------- lite popup end --------------*/
+.lite_model-content select{
+    margin-bottom: 4%;
+    width: 95%;
+}

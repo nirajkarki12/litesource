@@ -26,17 +26,17 @@ class Sessions extends CI_Controller {
 
     function login() {
 
+
         $this->_load_language();
 
         $this->load->helper(array('url', 'form'));
 
         $this->load->model('mdl_auth');
-
-        if ($this->mdl_auth->validate_login()) {
+	if ($this->mdl_auth->validate_login()) {
 
             if ($user = $this->mdl_auth->auth('mcb_users', 'username', 'password', $this->input->post('username'), $this->input->post('password'))) {
-
-                $object_vars = array('user_id', 'last_name', 'first_name', 'global_admin');
+		    
+		$object_vars = array('user_id', 'last_name', 'first_name', 'global_admin');
 
                 // set the session variables
                 $this->mdl_auth->set_session($user, $object_vars, array('is_admin'=>TRUE));

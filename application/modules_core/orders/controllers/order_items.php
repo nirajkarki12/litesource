@@ -107,7 +107,7 @@ class Order_Items extends Admin_Controller {
                         'history_id' => '0',
                         'inventory_id' => $invtry['inventory_id'],
                         'history_qty' => $itemQuantity * $invtry['inventory_qty'],
-                        'notes' => 'Stock In <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                        'notes' => 'Stock In <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                         'user_id' => $this->session->userdata('user_id'),
                         'created_at' => date('Y-m-d H:i:s')
                     );
@@ -151,7 +151,7 @@ class Order_Items extends Admin_Controller {
                         'history_id' => '0',
                         'inventory_id' => $invtry['inventory_id'],
                         'history_qty' => '-'.$itemQuantity * $invtry['inventory_qty'],
-                        'notes' => 'Stocked Out (Reverting Stock In) <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                        'notes' => 'Stocked Out (Reverting Stock In) <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                         'user_id' => $this->session->userdata('user_id'),
                         'created_at' => date('Y-m-d H:i:s')
                     );
@@ -187,7 +187,7 @@ class Order_Items extends Admin_Controller {
                 'history_id' => '0',
                 'inventory_id' => $value->inventory_id,
                 'history_qty' => $value->item_qty,
-                'notes' => 'Stock In <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                'notes' => 'Stock In <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                 'user_id' => $this->session->userdata('user_id'),
                 'created_at' => date('Y-m-d H:i:s')
             );
@@ -220,7 +220,7 @@ class Order_Items extends Admin_Controller {
                 'history_id' => '0',
                 'inventory_id' => $value->inventory_id,
                 'history_qty' => '-'.$value->item_qty,
-                'notes' => 'Stock Out <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                'notes' => 'Stock Out <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                 'user_id' => $this->session->userdata('user_id'),
                 'created_at' => date('Y-m-d H:i:s')
             );
@@ -255,25 +255,31 @@ class Order_Items extends Admin_Controller {
     function order_item_stock_change($order_id, $item_id) {
         
         $orderDetail = $this->mdl_orders->get_Row('mcb_orders', array('order_id' => $order_id));
+
         if ($orderDetail->is_inventory_supplier == '1') {
             
-            $this->inv_sup_item_stok_change($orderDetail, $item_id);
+            $this->inv_sup_item_stok_change($orderDetail, $item_id, $this->input->post('partial_qty'));
         } else {
             
-            $this->pro_sup_item_stok_change($orderDetail, $item_id);
+            $this->pro_sup_item_stok_change($orderDetail, $item_id, $this->input->post('partial_qty'));
         }
-        
+        $this->load->model('inventory/mdl_inventory_item');
+        $this->mdl_inventory_item->maintain_group_product_quantity($orderDetail->invoice_id);
+
         $this->session->set_flashdata('tab_index', 1);
         redirect(site_url('orders/edit/order_id/'.$order_id));
     }
     
     
-    function inv_sup_item_stok_change($orderDetail, $item_id) {
-        
+    function inv_sup_item_stok_change($orderDetail, $item_id, $qty = 0) {
         $order_id = $orderDetail->order_id;
         $order_number = $orderDetail->order_number;
         
         $value = $this->mdl_orders->get_Row('mcb_order_inventory_items', array('order_item_id' => $item_id));
+
+        $totalQty = $value->item_qty;
+        $value->item_qty = $qty ?: $value->partial_qty;
+        $new_qty = $value->stock_status == '0' ? $value->partial_qty + $qty : 0;
         
         if ($value->stock_status == '0') {
             $inventory = $this->mdl_orders->get_Row('mcb_inventory_item', array('inventory_id' => $value->inventory_id));
@@ -285,8 +291,10 @@ class Order_Items extends Admin_Controller {
                     $opn_order_qty = ($inventory->open_order_qty) - ($value->item_qty * $value->item_length);
                 }
                 $this->mdl_orders->update('mcb_inventory_item', 
-                        array('qty' => ($inventory->qty) + ($value->item_qty),
-                            'open_order_qty'=> ($inventory->qty) - ($value->item_qty)), 
+                        array(
+                            'qty' => ($inventory->qty) + ($value->item_qty),
+                            'open_order_qty'=> ($inventory->open_order_qty) - ($value->item_qty)
+                            ),
                         array('inventory_id' => $value->inventory_id));
                 //going to put history if the inventory qty is taken in or stock in
                 // +ve $addedQty
@@ -294,12 +302,12 @@ class Order_Items extends Admin_Controller {
                     'history_id' => '0',
                     'inventory_id' => $value->inventory_id,
                     'history_qty' => $value->item_qty,
-                    'notes' => 'Stock In <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                    'notes' => 'Stock In <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                     'user_id' => $this->session->userdata('user_id'),
                     'created_at' => date('Y-m-d H:i:s')
                 );
                 $this->db->insert('mcb_inventory_history',$data);
-                $value->stock_status = '1';
+                $value->stock_status = ($new_qty - $totalQty >= 0) ? '1' : '0';
                 $this->session->set_flashdata('custom_success', 'Stock In Accepted.');
             } else {
                 $this->session->set_flashdata('custom_error', 'This item is missing or removed.');
@@ -325,7 +333,7 @@ class Order_Items extends Admin_Controller {
                     'history_id' => '0',
                     'inventory_id' => $value->inventory_id,
                     'history_qty' => '-'.$value->item_qty,
-                    'notes' => 'Stock Out <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                    'notes' => 'Stock Out <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                     'user_id' => $this->session->userdata('user_id'),
                     'created_at' => date('Y-m-d H:i:s')
                 );
@@ -337,17 +345,21 @@ class Order_Items extends Admin_Controller {
             }
             
         }
-        $this->mdl_orders->update('mcb_order_inventory_items', array('stock_status' => $value->stock_status), array('order_item_id' => $item_id));
-        
+        $this->mdl_orders->update('mcb_order_inventory_items', array('stock_status' => $value->stock_status, 'partial_qty' => $new_qty), array('order_item_id' => $item_id));
+
+        $this->change_order_status('mcb_order_inventory_items', $order_id);
+
     }
     
-    
-    function pro_sup_item_stok_change($orderDetail, $item_id) {
+    function pro_sup_item_stok_change($orderDetail, $item_id, $qty = 0) {
         
         $order_id = $orderDetail->order_id;
         $order_number = $orderDetail->order_number;        
         $value = $this->mdl_orders->get_Row('mcb_order_items', array('order_item_id' => $item_id));
-        $itemQuantity = $value->item_qty;
+        //$itemQuantity = $value->item_qty;
+        $itemQuantity = $qty ?: $value->partial_qty;
+        $new_qty = $value->stock_status == '0' ? $value->partial_qty + $qty : 0;
+        
         $itemLength = $value->item_length;
         
         if ($value->stock_status == '0') {
@@ -370,13 +382,13 @@ class Order_Items extends Admin_Controller {
                     'history_id' => '0',
                     'inventory_id' => $invtry['inventory_id'],
                     'history_qty' => $itemQuantity * $invtry['inventory_qty'],
-                    'notes' => 'Stock In <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                    'notes' => 'Stock In <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                     'user_id' => $this->session->userdata('user_id'),
                     'created_at' => date('Y-m-d H:i:s')
                 );
                 $this->db->insert('mcb_inventory_history',$data);
             }
-            $value->stock_status = '1';
+            $value->stock_status = ($new_qty - $value->item_qty >= 0) ? '1' : '0';
             $this->session->set_flashdata('custom_success', 'Stock In Accepted.');
             
         } else {
@@ -398,7 +410,7 @@ class Order_Items extends Admin_Controller {
                     'history_id' => '0',
                     'inventory_id' => $invtry['inventory_id'],
                     'history_qty' => '-'.$itemQuantity * $invtry['inventory_qty'],
-                    'notes' => 'Stock Out <a href="'.site_url('orders/edit/order_id/'.$order_id).'">Order #'.$order_number.'</a>',
+                    'notes' => 'Stock Out <a href="_SITE_URL_/orders/edit/order_id/'.$order_id.'">Order #'.$order_number.'</a>',
                     'user_id' => $this->session->userdata('user_id'),
                     'created_at' => date('Y-m-d H:i:s')
                 );
@@ -407,10 +419,49 @@ class Order_Items extends Admin_Controller {
             $value->stock_status = '0';
             $this->session->set_flashdata('custom_success', 'Stock In Accepted.');
         }
-        $this->mdl_orders->update('mcb_order_items', array('stock_status' => $value->stock_status), array('order_item_id' => $item_id));  
+        $this->mdl_orders->update('mcb_order_items', array('stock_status' => $value->stock_status, 'partial_qty' => $new_qty), array('order_item_id' => $item_id));  
+        
+        $this->change_order_status('mcb_order_items', $order_id);
     }
     
-    
+    // Changing status of orders table to open(1) if any of its child's stock_status is 0 & order_status_id is 3 or close(3) if all of its child's stock status is 1
+    function change_order_status($table_name, $order_id) {
+        if(!$table_name || !$order_id) return;
+        $sql = "select order_id from `$table_name` where order_id = '$order_id'";
+
+        $all_records = $this->db->query($sql);
+        // $stock_in = $this->db->query($sql. " AND stock_status = '0'");
+        $stock_out = $this->db->query($sql. " AND stock_status = '1'");
+        
+        $total_records = $all_records->num_rows();
+        // $total_stock_in = $stock_in->num_rows();
+        $total_stock_out = $stock_out->num_rows();
+
+        // if($total_stock_in > 0) {
+        //     $this->mdl_orders->update('mcb_orders', array('order_status_id' => 1), array('order_id' => $order_id, 'order_status_id' => 3));
+        //     if($this->db->affected_rows() > 0) {
+        //         $data = array(
+        //             'user_id' => $this->session->userdata('user_id'),
+        //             'order_id' => $order_id,
+        //             'created_date' => date('Y-m-d H:i:s'),
+        //             'order_history_data' => 'Order Status changed to Open (Automatically due to item stock changed to Stock In).'
+        //         );
+        //         $this->db->insert('mcb_order_history', $data);
+        //     }
+        // }elseif($total_records == $total_stock_out) {
+        if($total_records == $total_stock_out) {
+            $this->mdl_orders->update('mcb_orders', array('order_status_id' => 3), array('order_id' => $order_id));
+            if($this->db->affected_rows() > 0){
+                $data = array(
+                    'user_id' => $this->session->userdata('user_id'),
+                    'order_id' => $order_id,
+                    'created_date' => date('Y-m-d H:i:s'),
+                    'order_history_data' => 'Order Status changed to Closed (Automatically due to all stock item changed to Stock Out).'
+                );
+                $this->db->insert('mcb_order_history', $data);
+            }
+        }
+    }
     
     function delete() {
         $order_item_id = uri_assoc('order_item_id', 4);

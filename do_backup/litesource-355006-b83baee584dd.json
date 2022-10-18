@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "litesource-355006",
+  "private_key_id": "b83baee584ddff03db373465e37ef9970d73b236",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC91m3EtPJPvvpY\nmKST+oELKHuvFcDuwudwsLfBH4VAxicUSS0biJ6PeMC885YfwNu2ZMQ5gKspbkFV\nF/T8i5YaTyTAndrulk/hn9/7de1hCoTTo0oepJiiS1kpUjBoQ8UT+hH+V7J+X/PW\nlev35/XP3RC4ux41xfoNfVR6bEwyG5S5Eng3xXNv9hKR3yFx9fis5atY5COhhZEs\nbKv5fCZv5VBtAYavjM/5GOVaPBA/pS+qdVP/4MtHUt2eNYTjxPvZDKxm23X5iP+2\nzdJmd9v+BPcOH9wLm8uTTRkKw3cZRffa3JiIIvGxHOyGVufIY35i92jIauOzAu/L\nRt3lUztvAgMBAAECggEAAU4W3gZiBaj9PbolTvYNO7fe3HeJas36Vu7ImwFFZrT+\njeoUd9aFh/6yhIBq2g1MKJLV1OZM4IbWLXmUBSwqnkPzJv9MrZkTvE5F/aU4bXmw\nGnkoO41t2mQI4Yv5GPO7HaOkMReO2JJ+bW+e8aitojEeMYKlqh6SKm3XVrLHoKZp\nZE4uQbT2mwGYtECQI/t/9+ocRfOee1fT1OQOA7sGPTQHjjwZJocUgJAjtbZWXzF/\n95qUAHzFPgiqmj1UGYg/UgF6QGFMDssCryTtzZ0F1XI379QYHTCNvvi27un5KDo1\nBMntIr3VqDyzrG0azUwaz214TJuaBgicHdoR+qi+4QKBgQDdviPDlqtFBKlOPkF+\nsnvHSbfTANoGreoKfCHii/+cum2K00E+tjz/WQGgTJuV4oFS/aZ+5hTHJfEr4Si9\nK9QJE9iyLxWdYnqGBN+Wnw+0WocwHbvIWih8ZvS5Kby16xrXdP9BiC18kjuA3nq5\niU7xzMmuyZ40Wi6a/Jy4KBzRyQKBgQDbKnNspLo9lr+POkXoSmbmyqAQOJVrpul/\n6p4kFdh0Xbv7Km0QnW7SkhbPyDO2Le/8xvBkSq3dadysX/pAwHTlXj5ctrQYojFR\n6GVmM1pgkpERdlIUBjpCVg5B79CyJCZ6mFDEs99pVjXLYlKoEhe+7lukW+REWdVO\ne+btyoN/dwKBgDqbyQQnTLl/U+iUV+dO8ZxpBadFsFrXmOaQjLw+WJ9qPw3UbIhQ\nzqqHMgDWfsENDzWKSXl9ArzocGgyqPvnG7IShtIB0+q3Xr8Rhq9e912qF9VF5p48\nBjtrUv+l4nUK4RtVlyoQ/kTQud2D8FgdzLnocN47+A7KT0szvZCHOabRAoGBANl5\nQzWwM5n/py+xjELW6UrkD3ZpH2PGKXcj0S5PewzlIi41yCmvfpN2ISqnJyEEblnu\n8gUi0WmerTlit4lfL9+V593J8eVrs/Lp3wxNssWXSloAhauXDmJa0CT/mZ/bHU+T\nKro1HmCBCjo543khEu0Dym3KPTTRy0bozZpx1JA7AoGBAMpRN31+1CF9YOsKVFBI\n3sMPpG1x4fcC2uyLNKbEdP2LIkrXU++5sGLNsJLcS6PIdHLsyRDSlXJL5Gnl60S7\nuobCebLgzOAaQaFvXLh91f3qN2mG7y4oJYITybcIHxRdQf1XLpxWrObezziqEAGf\nwMrOxUaxVHtBOEQkSKEnGEqe\n-----END PRIVATE KEY-----\n",
+  "client_email": "litesource-backup@litesource-355006.iam.gserviceaccount.com",
+  "client_id": "117377822393052605910",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/litesource-backup%40litesource-355006.iam.gserviceaccount.com"
+}

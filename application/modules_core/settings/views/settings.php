@@ -1,5 +1,18 @@
 <?php $this->load->view('dashboard/header'); ?>
 
+<style>
+    .restore_database_file_file_upload_err_txt{
+        color: green;
+        font-size: 10px;
+        margin: 0;
+        padding: 0;
+        font-style: italic;
+    }
+    .restore_database_btn_hide{
+        display: none;
+    }
+</style>
+
 <script type="text/javascript">
     $(function () {
         $('#accordion').accordion({active: false, collapsible: true, autoHeight: false});
@@ -17,7 +30,7 @@
 
 <div class="grid_10" id="content_wrapper">
 
-    <form method="post" action="<?php echo site_url($this->uri->uri_string()); ?>">
+    <form method="post" action="<?php echo site_url($this->uri->uri_string()); ?>" enctype='multipart/form-data'>
 
         <div class="section_wrapper">
             <h3 class="title_black"><?php echo $this->lang->line('system_settings'); ?>
@@ -34,20 +47,13 @@
                         <li><a href="#tab_custom"><?php echo $this->lang->line('custom_modules'); ?></a></li>
                         <li><a href="#tab_term_condition">Terms and Conditions</a></li>
                         <li><a href="#tab_banking_detail">Bank Details</a></li>
+                        <li><a href="#database_manage">Database</a></li>
                     </ul>
 
                     <div id="tab_application">
                         <dl>
                             <dt><label><?php echo $this->lang->line('application_version'); ?>: </label></dt>
                             <dd><?php echo $this->mdl_mcb_data->setting('version'); ?></dd>
-                        </dl>
-                        <dl>
-                            <dt><label><?php echo $this->lang->line('database_backup'); ?>: </label></dt>
-                            <dd><input type="submit" name="btn_backup" value="<?php echo $this->lang->line('database_backup'); ?>" /></dd>
-                        </dl>
-                        <dl>
-                            <dt><label><?php echo $this->lang->line('optimize_database'); ?>: </label></dt>
-                            <dd><?php echo anchor('settings/optimize_db', $this->lang->line('optimize_database')); ?></dd>
                         </dl>
                         <dl>
                             <dt><label><?php echo $this->lang->line('enable_profiler'); ?>: </label></dt>
@@ -84,7 +90,27 @@
                         <?php $this->load->view('bank_detail'); ?>
                     </div>
                     
-                    
+                    <div id="database_manage">
+                        <dl>
+                            <dt><label><?php echo $this->lang->line('database_backup'); ?>: </label></dt>
+                            <dd><input type="submit" name="btn_backup" value="Download Database" /></dd>
+                        </dl>
+
+                        <!-- <dl>
+                            <dt><label><?php echo $this->lang->line('optimize_database'); ?>: </label></dt>
+                            <dd><?php echo anchor('settings/optimize_db', $this->lang->line('optimize_database')); ?></dd>
+                        </dl> -->
+
+                        <dl>
+                            <dt style="margin-bottom: 0;"><label>Restore Database: </label></dt>
+                            <dd style="margin-bottom: 0;">
+                                <input type="file" name="userfile" />
+                                <input type="submit" name="restore_database" class="restore_database" value="Upload"/>
+                            </dd>
+                            <dt></dt>
+                            <dd><p class="restore_database_file_file_upload_err_txt"></p></dd>
+                        </dl>
+                    </div>
                     
                 </div>
                 <div style="clear: both;">&nbsp;</div>
@@ -94,3 +120,11 @@
 </div>
 
 <?php $this->load->view('dashboard/footer'); ?>
+<script type="text/javascript">
+    $(function () {
+        $( ".restore_database" ).on( "click", function() {
+            $('.restore_database_file_file_upload_err_txt').html('Please Wait it may take a mineuts');
+            $(this).addClass('restore_database_btn_hide');
+        });
+    });
+</script>

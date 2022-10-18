@@ -571,6 +571,7 @@ $lang['inventory_qty'] = 'Qty';
 $lang['add_inventory'] = 'Add Inventory Item';
 $lang['inventory_location'] = 'Location';
 $lang['inventory_history_qty'] = 'Quantity';
+$lang['inventory_history_qty_pending'] = 'Pending Quantity';
 $lang['inventory_history_notes'] = 'Notes';
 $lang['inventory_upload'] = 'Upload Inventory Data File';
 $lang['products_import_failed'] = 'Products Import Failed.';
@@ -578,6 +579,9 @@ $lang['products_import_success'] = 'Products Imported Successfully.';
 $lang['product_import_history'] = 'Product Import History';
 $lang['inventory_import_history'] = 'Inventory Import History';
 $lang['link_to_product'] = 'Link To Products';
+$lang['add_category'] = 'Add New Category';
+$lang['category_label'] = 'Item Categories';
+$lang['category'] = 'Category';
 $lang['export_inventory'] = 'Export Inventory Data';
 $lang['supplier_text'] = 'Supplier';
 $lang['inventory_items_for_unit_product'] = 'Related Inventory';
@@ -585,6 +589,13 @@ $lang['delete_client'] = 'Delete Client';
 $lang['stock_status'] = 'Stock Status';
 $lang['internal'] = 'Internal';
 $lang['quote_to_orders_invoice'] = 'Convert to Orders/Invoice';
-
-
-?>
+$lang['category_name'] = 'Name';
+$lang['category_status'] = 'Status';
+$lang['category_form'] = 'Category Form';
+$lang['count_cat'] = 'Count';
+$lang['partial_qty'] = 'Partial Qty';
+$lang['housing_label'] = 'Housing Products';
+$lang['add_new_housing'] = 'Add New Housing';
+$lang['bulk_link_housings'] = 'Bulk Housing';
+$lang['housing_form'] = 'Housing Form';
+$lang['related_inventory_to_group_product'] = 'Related Inventory to Group Product';

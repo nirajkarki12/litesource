@@ -20,7 +20,6 @@ define('DIR_WRITE_MODE', 0777);
 define('LOW_STOCK', 100);
 
 define('ORDERTO', 'PRODUCT');
-//define('ORDERTO', 'INVENTORYSUPPLIER');
 
 /*
 |--------------------------------------------------------------------------

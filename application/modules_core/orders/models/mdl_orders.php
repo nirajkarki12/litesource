@@ -91,7 +91,7 @@ class Mdl_Orders extends MY_Model {
                 'left'
             ),
             'mcb_invoice_statuses' => 'mcb_invoice_statuses.invoice_status_id = mcb_orders.order_status_id',
-            'mcb_users' => 'mcb_users.user_id = mcb_orders.user_id',
+            'mcb_users' => array('mcb_users.user_id = mcb_orders.user_id', 'left'),
             'mcb_invoices' => array(
                 'mcb_invoices.invoice_id = mcb_orders.invoice_id',
                 'left'
@@ -104,7 +104,7 @@ class Mdl_Orders extends MY_Model {
                 't.tax_rate_id = mcb_orders.order_tax_rate_id',
                 'left'         //left join to allow for there being no order_items
             ),
-            'mcb_currencies' => 'mcb_currencies.currency_id = mcb_clients.client_currency_id'
+            'mcb_currencies' => 'mcb_currencies.currency_id = mcb_clients.client_currency_id',
         );
 
 
@@ -167,8 +167,8 @@ class Mdl_Orders extends MY_Model {
         if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
             //ia.invoice_total as total,
             $select = "SQL_CALC_FOUND_ROWS
-			o.order_id id,
-			o.order_date_entered e,
+			o.order_id id, 
+                        IF( (o.order_date_emailed > '1'), o.order_date_emailed, o.order_date_entered ) e, 
 			o.supplier_id c,
 			o.project_id p,
 			o.contact_id ct,
@@ -254,47 +254,125 @@ class Mdl_Orders extends MY_Model {
         return $fin;
     }
 
-    public function get_raw_($limit = NULL, $offset = NULL) {
+    public function get_orders($limit = NULL, $offset = '0', $filters = []) {
 
-        $select = "SQL_CALC_FOUND_ROWS
-			o.order_id id,
-			o.order_date_entered e,
-			o.supplier_id c,
-			o.project_id p,
-			o.contact_id ct,
-			o.order_number n,
-			o.order_status_id s,
-			o.order_tax_rate_id t,
-			o.invoice_id qi,
-                        ia.invoice_total as total,
+        $fin = array();
+
+        if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
+            $select = "SQL_CALC_FOUND_ROWS
+            o.order_id id, 
+                        IF( (o.order_date_emailed > '1'), o.order_date_emailed, o.order_date_entered ) e, 
+            o.supplier_id c,
+            o.project_id p,
+            o.contact_id ct,
+            o.order_number n,
+            o.order_status_id s,
+            o.order_tax_rate_id t,
+            o.invoice_id qi,
+                        cr.currency_symbol_left,cr.currency_symbol_right,cr.currency_code as cur,
+                        FORMAT(order_sub_total * (1 + IFNULL(t.tax_rate_percent, 0)/100), 2) as total,
+                        FORMAT(order_sub_total_oi * (1 + IFNULL(t.tax_rate_percent, 0)/100), 2) as total_oi,
                         o.order_supplier_invoice_number as supplier_invoice_number,
-			q.invoice_number qn";
-        //SUM(i.item_qty * i.item_supplier_price) a";
+                        o.is_inventory_supplier inv_sup,
+            q.invoice_number qn";
+            $this->db->join('(SELECT mcb_orders.order_id, SUM(item_qty * item_supplier_price) order_sub_total from mcb_orders left join `mcb_order_inventory_items` on mcb_orders.order_id = mcb_order_inventory_items.order_id group by mcb_order_inventory_items.order_id) AS i', 'i.order_id = o.order_id', 'left');
+            $this->db->join('(SELECT mcb_orders.order_id, SUM(item_qty * item_supplier_price) order_sub_total_oi from mcb_orders left join `mcb_order_items` on mcb_orders.order_id = mcb_order_items.order_id group by mcb_order_items.order_id) AS oi', 'oi.order_id = o.order_id', 'left');
+
+        } else {
+            $select = "SQL_CALC_FOUND_ROWS
+            o.order_id id,
+            o.order_date_entered e,
+            o.supplier_id c,
+            o.project_id p,
+            o.contact_id ct,
+            o.order_number n,
+            o.order_status_id s,
+            o.order_tax_rate_id t,
+            o.invoice_id qi,
+                        cr.currency_symbol_left,cr.currency_symbol_right,cr.currency_code as cur,
+                        FORMAT(order_sub_total * (1 + IFNULL(t.tax_rate_percent, 0)/100), 2) as total,
+                        o.order_supplier_invoice_number as supplier_invoice_number,
+            q.invoice_number qn";
+            $this->db->join('(SELECT mcb_orders.order_id, SUM(item_qty * item_supplier_price) order_sub_total from mcb_orders left join `mcb_order_items` on mcb_orders.order_id = mcb_order_items.order_id group by mcb_order_items.order_id) AS i', 'i.order_id = o.order_id', 'left');
+        }
 
         $this->db->select($select, FALSE);
         $this->db->order_by('o.order_date_entered DESC, o.order_id DESC');
-        //$this->db->join('mcb_order_items AS i', 'i.order_id = o.order_id', 'left');
         $this->db->join('mcb_invoices AS q', 'q.invoice_id = o.invoice_id', 'left');
         $this->db->join('mcb_invoice_amounts AS ia', 'ia.invoice_id = o.invoice_id', 'left');
-
-        //$this->db->group_by('id');
+        $this->db->join('mcb_tax_rates AS t', 't.tax_rate_id = o.order_tax_rate_id', 'left');
+        $this->db->join('mcb_clients AS clnt', 'clnt.client_id = o.supplier_id', 'left');
+        $this->db->join('mcb_currencies AS cr', 'cr.currency_id = clnt.client_currency_id', 'left');
+        $this->db->join('mcb_projects AS project', 'project.project_id = o.project_id', 'left');
 
 
         if ($limit) {
             $this->db->limit($limit, $offset);
         }
 
+        $where_cond = null;
+        $filter_added = false;
+
+        if($filters && is_array($filters) && count($filters) > 0){
+            if(array_key_exists('cur', $filters) && $filters['cur'] != 'false'){
+                $this->db->like('cr.currency_code', strtolower($filters['cur']), 'both'); 
+                $filter_added = true;
+            }
+            if(array_key_exists('order_date', $filters) && $filters['order_date'] != 'false'){
+
+                if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
+                    $this->db->like("DATE_FORMAT(FROM_UNIXTIME(IF( (o.order_date_emailed > '1'), o.order_date_emailed, o.order_date_entered )), '%d/%m/%Y')", $filters['order_date'], 'both'); 
+                }else{
+                    $this->db->like("DATE_FORMAT(FROM_UNIXTIME(o.order_date_entered), '%d/%m/%Y')", $filters['order_date'], 'both'); 
+                }
+                $filter_added = true;
+            }
+            if(array_key_exists('order_number', $filters) && $filters['order_number'] != 'false'){
+                $this->db->like('o.order_number', $filters['order_number'], 'both'); 
+                $filter_added = true;
+            }
+            if(array_key_exists('order_quote', $filters) && $filters['order_quote'] != 'false'){
+                $this->db->like('q.invoice_number', $filters['order_quote'], 'both'); 
+                $filter_added = true;
+            }
+            if(array_key_exists('project_name', $filters) && $filters['project_name'] != 'false'){
+                $this->db->like('LOWER(project.project_name)', strtolower($filters['project_name']), 'both');
+                $filter_added = true;
+            }
+            if(array_key_exists('supplier_invoice_number', $filters) && $filters['supplier_invoice_number'] != 'false'){
+                $this->db->like('o.order_supplier_invoice_number', $filters['supplier_invoice_number'], 'both');
+                $filter_added = true;
+            }
+            if(array_key_exists('total', $filters) && $filters['total'] != 'false'){
+                $this->db->like('FORMAT(order_sub_total * (1 + IFNULL(t.tax_rate_percent, 0)/100), 2)', $filters['total'], 'both');
+                $filter_added = true;
+            }
+            if(array_key_exists('supplier_name', $filters) && $filters['supplier_name'] != 'false'){
+                $this->db->like('LOWER(clnt.client_name)', strtolower($filters['supplier_name']), 'both');
+                $filter_added = true;
+            }
+            if(array_key_exists('order_status', $filters) && $filters['order_status'] != 'false'){
+                $this->db->where('o.order_status_id', $filters['order_status']);
+                $filter_added = true;
+            }
+
+        }
+        
         $query = $this->db->get('mcb_orders AS o');
         $result = $query->result();
-        $fin = array();
         if (sizeof($result) > 0) {
             foreach ($result as $res) {
-                $res->total = $this->formatMoney($res->total);
+                $res->total = $this->formatMoney($res->total, $res->currency_symbol_left, $res->currency_symbol_right);
+
+                if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER' && $res->inv_sup == '0') {
+                    $res->total = $this->formatMoney($res->total_oi, $res->currency_symbol_left, $res->currency_symbol_right);
+                }
+
                 $fin[] = $res;
             }
         }
-        //echo '<pre>'; print_r($fin); exit;
-        return $fin;
+
+        return ['orders' => $fin, 'total_data' => count($fin), 'filters' => $filter_added];
     }
 
     public function formatMoney($total, $ls, $rs) {
@@ -342,10 +420,10 @@ class Mdl_Orders extends MY_Model {
     
     
     public function save_order_db_array($order_id, $db_array) {
-
-
+        
         $this->db->where('order_id', $order_id);
         $this->db->update($this->table_name, $db_array);
+        $this->order_save_to_history($order_id, "Saved Order Options.");
     }
 
     public function save() {
@@ -353,7 +431,7 @@ class Mdl_Orders extends MY_Model {
         $order_id = uri_assoc('order_id');
 
         $order = $this->get_by_id($order_id);
-
+        
         // Can only save details if order is open
         //if ($order->order_status_type == 1) {
         
@@ -362,10 +440,17 @@ class Mdl_Orders extends MY_Model {
             'contact_id' => $this->input->post('contact_id'),
             'project_id' => $this->input->post('project_id'),
             'order_number' => $this->input->post('order_number'),
-            'order_date_entered' => strtotime(standardize_date($this->input->post('order_date_entered'))),
+            //'order_date_entered' => strtotime(standardize_date($this->input->post('order_date_entered'))),
             'order_notes' => $this->input->post('order_notes'),
-            'order_supplier_invoice_number' => $this->input->post('order_supplier_invoice_number')
+            'order_supplier_invoice_number' => $this->input->post('order_supplier_invoice_number'),
+            'i_invoice_number'=>$this->input->post('i_invoice_number'),
         );
+        
+        if($order->order_date_emailed > '1'){
+            $db_array['order_date_emailed'] = strtotime(standardize_date($this->input->post('order_date_entered')));
+        } else {
+            $db_array['order_date_entered'] = strtotime(standardize_date($this->input->post('order_date_entered')));
+        }
         //}
 
         if (is_numeric($this->input->post('order_status_id'))) {
@@ -374,6 +459,9 @@ class Mdl_Orders extends MY_Model {
         }
 
         $this->save_order_db_array($order_id, $db_array);
+
+        $this->load->model('inventory/mdl_inventory_item');
+        $this->mdl_inventory_item->maintain_group_product_quantity($order->invoice_id);
 
         $this->session->set_flashdata('custom_success', $this->lang->line('order_options_saved'));
     }
@@ -670,7 +758,7 @@ class Mdl_Orders extends MY_Model {
                     . "mcb_users ON mcb_users.user_id = mcb_orders.user_id LEFT JOIN mcb_invoices "
                     . "ON mcb_invoices.invoice_id = mcb_orders.invoice_id LEFT JOIN mcb_projects AS prj "
                     . "ON prj.project_id = mcb_orders.project_id LEFT JOIN mcb_tax_rates AS t ON "
-                    . "t.tax_rate_id = mcb_orders.order_tax_rate_id JOIN mcb_currencies ON "
+                    . "t.tax_rate_id = mcb_orders.order_tax_rate_id LEFT JOIN mcb_currencies ON "
                     . "mcb_currencies.currency_id = mcb_clients.client_currency_id WHERE "
                     . "`mcb_invoices`.`invoice_id` = '" . $invoice_id . "' ORDER BY FROM_UNIXTIME(mcb_orders.order_date_entered) DESC, "
                     . "mcb_orders.order_number DESC";
@@ -692,33 +780,7 @@ class Mdl_Orders extends MY_Model {
 
         return $res;
     }
-
-    private function create_invoice_orders_old($invoice_id, $order_date_entered) {
-
-        /*
-         * Need to handle the case where orders have already been created
-         * i.e should only add the new orders/order_items
-         */
-        $sql = "INSERT INTO mcb_orders (invoice_id, supplier_id, order_number, user_id, order_tax_rate_id, order_date_entered, order_status_id)
-                SELECT DISTINCT invoice_id, p.supplier_id, '0', ?, c.client_tax_rate_id, ?, 1
-                FROM mcb_invoice_items i
-                INNER JOIN mcb_products p ON p.product_id = i.product_id
-                INNER JOIN mcb_clients c ON c.client_id = p.supplier_id
-              WHERE i.invoice_id = ?";
-
-        $user_id = $this->session->userdata('user_id');
-        $this->db->query($sql, array($user_id, $order_date_entered, $invoice_id));
-
-        $ret = $this->db->affected_rows();
-
-        if ($ret > 0) {
-
-            log_message('debug', 'Created ' . $ret . ' new orders');
-
-            $this->create_order_items($invoice_id);
-        }
-    }
-
+    
     public function update_invoice_item_product_ids($invoice_id) {
 
         log_message('INFO', 'Updating mcb_invoice_items.product_id for invoice: ' . $invoice_id);
@@ -786,6 +848,17 @@ class Mdl_Orders extends MY_Model {
         }
     }
     
+    function get_i_invoice_number($invoice_id) {
+        
+        $i_id = $this->common_model->get_row('mcb_invoices', array('invoice_quote_id'=>$invoice_id));
+        if( isset($i_id->invoice_number) ){
+            $order->i_invoice_number = $i_id->invoice_number;
+        } else {
+            $order->i_invoice_number = '';
+        }
+        return $order->i_invoice_number;
+    }
+    
     function get_invoice_clients($invoice_id) {
         $this->load->model('invoices/mdl_invoices');
         $invoice = $this->mdl_invoices->get_by_id($invoice_id);
@@ -801,12 +874,20 @@ class Mdl_Orders extends MY_Model {
             $invoice_arr->contact_id = $contact_id;
             $invoice = $invoice_arr;
         }
+        if( isset($_POST['order_date_entered']) ){
+            $invoice->order_date_entered = strtotime(standardize_date($this->input->post('order_date_entered')));
+        } else {
+            $invoice->order_date_entered = time();
+        }
         return $invoice;
     }
     
     public function create_supplier_order($supplier, $invoice_id ) {
+        
+        $i_invoice_number = $this->get_i_invoice_number($invoice_id);
         //----- get invoice details---------
         $invoice = $this->get_invoice_clients($invoice_id);
+        
         $this->load->model('sequences/mdl_sequences');
         $db_array = array(
             'supplier_id' => $supplier->client_id,
@@ -815,12 +896,13 @@ class Mdl_Orders extends MY_Model {
             'project_id' => $invoice->project_id,
             'order_number' => $this->mdl_sequences->get_next_value(2),
             'order_tax_rate_id' => $supplier->client_tax_rate_id,
-            'order_date_entered' => time(),
+            'order_date_entered' => $invoice->order_date_entered,
             'user_id' => $this->session->userdata('user_id'),
             'order_address_id' => $this->mdl_mcb_data->setting('default_order_address_id'),
             'order_status_id' => $this->mdl_mcb_data->setting('default_open_status_id'),
             'is_inventory_supplier' => '1',
-            'inventory_id' => '0'
+            'inventory_id' => '0',
+            'i_invoice_number'=>$i_invoice_number
         );
         //---------save to database---------
         $this->db->trans_start();
@@ -874,7 +956,6 @@ class Mdl_Orders extends MY_Model {
     }
     
     function create_order_items($order_id, $supplier, $invoice_id, $all_inventories, $invoice_items) {
-        
         $order_item_count = 0;
         //------ from inventory_item tables---------
         foreach ($all_inventories as $item) {
@@ -892,6 +973,9 @@ class Mdl_Orders extends MY_Model {
                 if( ($item->invc_item_length > '0') && (strpos($item->supplier_description, '{mm}')) ){
                     $item->supplier_description = mm_to_span($item->supplier_description,$item->invc_item_length,1000);
                 }
+
+                if(!$item->supplier_price && $item->base_price > 0) $item->supplier_price = $item->base_price;
+
                 //preparing array in put into mcb_order_inventory_items
                 //this is the table that is going to be used
                 $data = array(
@@ -958,7 +1042,10 @@ class Mdl_Orders extends MY_Model {
     
     
     public function create_invoice_orders($invoice_id, $all_inventories, $invoice_items) {
-        
+        // echo "<pre>";
+        // print_r($all_inventories);
+        // die;
+
         $err_msg = [];
         $warning_msg = [];
         $msg_str = '';
@@ -986,7 +1073,6 @@ class Mdl_Orders extends MY_Model {
             log_message('INFO', 'Created new order for supplier: ' . $supplier->client_name);
             //========create order items===========
             $this->create_order_items($order_id, $supplier, $invoice_id, $all_inventories, $invoice_items);
-            
             //=============this is for messages==========
             $products = $this->get_order_items($order_id);
             $this->load->model('products/mdl_products_inventory');
@@ -997,7 +1083,9 @@ class Mdl_Orders extends MY_Model {
                     $result = $this->mdl_inventory_history->inventory_qty_order_deduct($inventory->inventory_id, "-" . ($inventory->inventory_qty * $product->item_qty), "Order # " . $order_id);
                     if ($result == 'Negative') {
                         $name = $this->mdl_inventory_item->get_by_id($inventory->inventory_id)[0]->name;
-                        $err_msg[] = $name . " is negative inventory";
+                        if (!in_array($name . " is negative inventory", $err_msg)) {
+                            $err_msg[] = $name . " is negative inventory";
+                        }
                     } elseif ($result == 'Low') {
                         $name = $this->mdl_inventory_item->get_by_id($inventory->inventory_id)[0]->name;
                         //$warning_msg[] = $name . " is low in inventory";
@@ -1012,131 +1100,6 @@ class Mdl_Orders extends MY_Model {
             }
         }
         $res = true;
-        $finres = array(
-            'status' => $res,
-            'message' => $msg_str,
-            'all_orders' => $all_orders
-        );
-        return $finres;
-    }
-
-    public function create_invoice_orders_leatest($invoice_id, $order_date_entered) {
-
-        $invoice_items = $this->get_invoice_itemsbyid($invoice_id);
-        $is_inventory_supplier = FALSE;
-        foreach ($invoice_items as $value) {
-            if ($value->product_dynamic == '1') {
-                $is_inventory_supplier = TRUE;
-            }
-        }
-        if ($is_inventory_supplier == TRUE) {
-            $this->config->set_item('ORDERTO', 'INVENTORYSUPPLIER');
-            $is_inv_sup = '1';
-        } else {
-            $is_inv_sup = '0';
-        }
-
-        $res = false;
-        $all_orders = array();
-        $this->update_invoice_item_product_ids($invoice_id);
-        $this->load->model('inventory/mdl_inventory_item');
-        $err_msg = [];
-        $warning_msg = [];
-        $msg_str = '';
-//        $new_product_count = $this->create_invoice_new_products($invoice_id);
-        $new_product_count = 0;
-        // Need to check for 'new' products with unknown supplier
-        // Will not create orders if such products exist
-        // Need to re-direct user to product edit screens
-        // where the details for new products can be completed
-        if ($new_product_count > 0) {
-            $msg_str .= 'Please update the products before converting to order. <a href="' . site_url() . '/quotes/edit/invoice_id/' . $invoice_id . '">Back to Quote</a>';
-            // Update again to pick up the new product id's
-            $this->update_invoice_item_product_ids($invoice_id);
-        } else {
-//            if ($this->missing_invoice_product_suppliers($invoice_id)) {
-//                log_message('INFO', 'Some products have no supplier for invoice_id: ' . $invoice_id);
-//                $msg_str .= 'Could not convert to order. Some products have no supplier for invoice_id: ' . $invoice_id . '</br>';
-//            } else {
-                $this->load->model('invoices/mdl_invoices');
-                $invoice = $this->mdl_invoices->get_by_id($invoice_id);
-                log_message('INFO', 'Creating orders for invoice: ' . $invoice_id);
-                //we are changing the logic so that the orders now will be directly sent to Inventory
-                if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
-                    $sql = "SELECT DISTINCT i.invoice_id, ii.supplier_id, c.client_name
-                        FROM mcb_invoice_items i
-                        LEFT JOIN mcb_products_inventory AS pi ON pi.product_id = i.product_id
-                        LEFT JOIN mcb_inventory_item AS ii ON pi.inventory_id = ii.inventory_id
-                        LEFT JOIN mcb_clients c ON c.client_id = ii.supplier_id
-                        LEFT JOIN mcb_products p ON p.product_id = i.product_id
-                        WHERE i.invoice_id = ?
-                        AND IF( p.product_dynamic >0, ( i.item_qty * i.item_length ), (i.item_qty) ) >0";
-                } else {
-                    $sql = "SELECT DISTINCT p.supplier_id, c.client_name
-                        FROM mcb_invoice_items i
-                        INNER JOIN mcb_products p ON p.product_id = i.product_id
-                        INNER JOIN mcb_clients c ON c.client_id = p.supplier_id
-                        WHERE i.invoice_id = ?
-                        AND i.item_qty > 0";
-                }
-                $suppliers = $this->db->query($sql, array($invoice_id))->result();
-
-//                echo "<pre>";
-//                print_r($suppliers);
-//                die;
-
-                /*
-                 * Maybe each client/supplier needs a default contact?
-                 */
-                foreach ($suppliers as $supplier) {
-
-                    $order_id = $this->create_supplier_order($supplier->supplier_id, '', $invoice_id, $invoice->project_id, time(), FALSE, $is_inv_sup);
-                    $all_orders[] = $order_id;
-
-
-//                    echo "<pre>";
-//                    print_r($order_id);
-//                    die;
-                    //record in history
-                    $data = array(
-                        'user_id' => $this->session->userdata('user_id'),
-                        'order_id' => $order_id,
-                        'created_date' => date('Y-m-d H:i:s'),
-                        'order_history_data' => 'Created new order for supplier: ' . $supplier->client_name
-                    );
-                    $this->db->insert('mcb_order_history', $data);
-                    log_message('INFO', 'Created new order for supplier: ' . $supplier->client_name);
-
-                    $this->create_order_items($order_id, $invoice_id);
-
-                    $products = $this->get_order_items($order_id);
-
-                    $this->load->model('products/mdl_products_inventory');
-                    $this->load->model('inventory/mdl_inventory_history');
-                    foreach ($products as $product) {
-                        $inventories = $this->mdl_products_inventory->get_by_product_id($product->product_id);
-                        foreach ($inventories as $inventory) {
-                            $result = $this->mdl_inventory_history->inventory_qty_order_deduct($inventory->inventory_id, "-" . ($inventory->inventory_qty * $product->item_qty), "Order # " . $db_array['order_id']);
-                            if ($result == 'Negative') {
-                                $name = $this->mdl_inventory_item->get_by_id($inventory->inventory_id)[0]->name;
-                                $err_msg[] = $name . " is negative inventory";
-                            } elseif ($result == 'Low') {
-                                $name = $this->mdl_inventory_item->get_by_id($inventory->inventory_id)[0]->name;
-//                                 $warning_msg[] = $name . " is low in inventory";
-                            }
-                        }
-                    }
-
-                    if (count($err_msg) > 0) {
-                        $this->session->set_flashdata('order_error', $err_msg);
-                    }
-                    if (count($warning_msg) > 0) {
-                        $this->session->set_flashdata('order_warning', $warning_msg);
-                    }
-                }
-                $res = true;
-//            }
-        }
         $finres = array(
             'status' => $res,
             'message' => $msg_str,
@@ -1189,176 +1152,6 @@ class Mdl_Orders extends MY_Model {
             }
         }
         return $c;
-    }
-
-    function create_order_items_old($order_id, $invoice_id = NULL) {
-
-        $orderDetail = $this->get_Row('mcb_orders', array('order_id' => $order_id));
-        if ($orderDetail->is_inventory_supplier == '1') {
-            $this->config->set_item('ORDERTO', 'INVENTORYSUPPLIER');
-        }
-
-        if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
-            //we need a logic here so that existing db structure works
-            //we take items from invoice, get the inventories and put it in mcb_order_inventory_items
-            $order_inv_items = array();
-            $c = 0;
-            if ($invoice_id) {
-                $invoice_items = $this->get_invoice_itemsbyid($invoice_id);
-                $this->load->model('products/mdl_products');
-                if ((sizeof($invoice_items) > 0)) {
-                    foreach ($invoice_items as $i_item) {
-                        $linked_invs = $this->get_related_invs($i_item->product_id);
-                        foreach ($linked_invs as $li) {
-                            if ((sizeof($linked_invs) > 0) && ($li->supplier_id == $orderDetail->supplier_id )) {
-                                if( ($i_item->item_length > '0') && (strpos($li->name, '{mm}')) ){    
-                                    $li->name = mm_to_span($i_item->name, $i_item->item_length, 1000);
-                                }
-                                if( ($i_item->item_length > '0') && (strpos($li->description, '{mm}')) ){
-                                    $li->description = mm_to_span($i_item->description, $i_item->item_length, 1000);
-                                }
-                                if( ($i_item->item_length > '0') && (strpos($li->supplier_code, '{mm}')) ){    
-                                    $li->supplier_code = mm_to_span($i_item->supplier_code, $i_item->item_length, 1000);
-                                }
-                                if( ($i_item->item_length > '0') && (strpos($li->supplier_description, '{mm}')) ){
-                                    $li->supplier_description = mm_to_span($i_item->supplier_description, $i_item->item_length, 1000);
-                                }
-                                //preparing array in put into mcb_order_inventory_items
-                                //this is the table that is going to be used
-                                $data = array(
-                                    'order_id' => $order_id,
-                                    'inventory_id' => $li->inventory_id,
-                                    'product_id' => $i_item->product_id,
-//                                    'item_name' => $i_item->item_name,
-                                    'item_name' => $li->name,
-                                    'item_type' => $i_item->item_type,
-//                                    'item_description' => $i_item->item_description,
-                                    'item_description' => $li->description,
-                                    'item_qty' => $i_item->item_qty * $li->inventory_qty, //2 products = 4 inventory items
-                                    'item_supplier_price' => $li->inventory_supplier_price,
-                                    'item_supplier_code' => $li->supplier_code,
-                                    'item_supplier_description' => $li->supplier_description,
-                                    'item_index' => $i_item->item_index,
-                                    'item_length' => $i_item->item_length,
-                                    'item_per_meter' => $i_item->item_per_meter
-                                );
-                                //check if $i_item->product_id is dynamic, $i_item->invoice_item_id, if item_length > 0, 
-                                if ($i_item->item_length > '0') {
-                                    $data['item_supplier_price'] = $li->inventory_supplier_price*$i_item->item_length;
-                                    $data['item_qty'] = ($i_item->item_qty * $li->inventory_qty);
-                                }
-                                $min_product_stock_available = $this->getMinimumPossibleProduct($i_item->product_id);
-                                if (($i_item->item_length > '0') && ($li->use_length > '0')) {
-                                    $update_qty = ($data['item_qty'] - ($min_product_stock_available / $i_item->item_length) >= 0) ? ($data['item_qty'] - ($min_product_stock_available / $i_item->item_length)) : 0;
-                                    $open_order_qty = $update_qty * $i_item->item_length;
-                                } else {
-                                    $update_qty = ($data['item_qty'] - $min_product_stock_available >= 0) ? ($data['item_qty'] - $min_product_stock_available) : 0;
-                                    $open_order_qty = $update_qty;
-                                }
-//                                echo '<pre>';
-//                                echo $min_product_stock_available;
-//                                echo '<br>';
-//                                print_r($data['item_qty']);
-//                                echo "<br>";
-//                                echo $update_qty;
-//                                print_r($data);
-//                                die;
-                                $order_inv_items[] = $li;
-                                if ($update_qty > 0) {
-                                    $this->db->insert('mcb_order_inventory_items', $data);
-                                    $i = $this->db->insert_id();
-                                    if ($i > 0) {
-                                        $inv_itm = $this->get_Row('mcb_inventory_item', array('inventory_id' => $li->inventory_id));
-                                        $this->update('mcb_inventory_item', array('open_order_qty' => ($inv_itm->open_order_qty + $open_order_qty )), array('inventory_id' => $li->inventory_id));
-                                        $c++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-//            echo "<pre>";
-//            print_r($invoice_items);
-//            print_r($order_inv_items);
-//            die;
-
-            $ret = $c;
-        } else {
-            $sql = "INSERT INTO mcb_order_items (order_id, product_id, item_name, item_type, item_description, item_qty, item_supplier_price, item_index, item_length, item_per_meter)
-                    SELECT o.order_id, p.product_id, i.item_name, i.item_type, i.item_description, i.item_qty, p.product_supplier_price, i.item_index, i.item_length, i.item_per_meter
-                    FROM mcb_orders o
-                    INNER JOIN mcb_invoice_items i ON i.invoice_id = o.invoice_id
-                    INNER JOIN mcb_products p ON p.product_id = i.product_id
-                    WHERE o.order_id = ?
-                    AND i.item_qty > 0
-                    AND p.supplier_id = o.supplier_id";
-
-            $this->db->query($sql, array($order_id));
-            $ret = $this->db->affected_rows();
-        }
-
-        if ($ret > 0) {
-
-            //going to implement the order_item qty update :: If there are some products in stock, we will use from stock
-            $order_items = $this->get_order_itemsbyid($order_id);
-
-//            echo "<pre>";
-//            print_r($order_items);
-//            die;
-
-            if (sizeof($order_items) > 0) {
-                foreach ($order_items as $o_item) {
-
-                    $product_id = $o_item->product_id;
-                    $min_product_stock_available = $this->getMinimumPossibleProduct($product_id);
-                    $update_qty = ($o_item->item_qty - $min_product_stock_available >= 0) ? ($o_item->item_qty - $min_product_stock_available) : 0;
-                    $used_qty = ($o_item->item_qty - $min_product_stock_available >= 0) ? $min_product_stock_available : ($min_product_stock_available - $o_item->item_qty);
-
-                    if (($o_item->use_length == '1') && ($o_item->item_length > '0')) {
-                        $min_product_stock_available = floor($min_product_stock_available / $o_item->item_length);
-                        $update_qty = ($o_item->item_qty - $min_product_stock_available >= 0) ? ($o_item->item_qty - $min_product_stock_available) : 0;
-                        $used_qty = ($o_item->item_qty - $min_product_stock_available >= 0) ? $min_product_stock_available : ($min_product_stock_available - $o_item->item_qty);
-                    }
-
-                    $o_data = array(
-                        'item_qty' => $update_qty
-                    );
-                    $this->db->where('order_item_id', $o_item->order_item_id);
-                    if ($this->config->item('ORDERTO') == 'INVENTORYSUPPLIER') {
-                        $update = $this->db->update('mcb_order_inventory_items', $o_data);
-                        if ($update) {
-                            
-                        }
-                    } else {
-                        $update = $this->db->update('mcb_order_items', $o_data);
-                    }
-                    if ($update) {
-                        if ($used_qty > 0) {
-                            //let show this update in history
-                            $h_data = array(
-                                'user_id' => $this->session->userdata('user_id'),
-                                'order_id' => $order_id,
-                                'created_date' => date('Y-m-d H:i:s'),
-                                'order_history_data' => 'Item <b>' . $o_item->item_name . '</b> had ' . $used_qty . ' in stock. So used ' . $used_qty . ' items for this order from stock.'
-                            );
-                            $this->db->insert('mcb_order_history', $h_data);
-                        }
-                    }
-                }
-            }
-
-            //record in history
-            $data = array(
-                'user_id' => $this->session->userdata('user_id'),
-                'order_id' => $order_id,
-                'created_date' => date('Y-m-d H:i:s'),
-                'order_history_data' => 'Order: ' . $order_id . ' created ' . $ret . ' new order items'
-            );
-            $this->db->insert('mcb_order_history', $data);
-            log_message('debug', 'Order: ' . $order_id . ' created ' . $ret . ' new order items');
-        }
     }
 
     public function getMinimumPossibleProduct($product_id) {
@@ -1496,7 +1289,7 @@ class Mdl_Orders extends MY_Model {
         //print_r($this->db->last_query()); exit;
         return $q->result();
     }
-
+    
     public function get_related_invs($product_id) {
 		//make sure the product ->inventory link is inventory group.. incase of relationships that shouldn't be there..
 		
@@ -1654,7 +1447,9 @@ class Mdl_Orders extends MY_Model {
             $sql_order_items = 'SELECT *, oii.order_item_id as id, '
                     . 'FORMAT((oii.item_qty * oii.item_supplier_price),2) AS item_subtotal, '
                     . 'oii.stock_status,'
-                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action, 1 as is_inv_sup,  '
+//                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action, 1 as is_inv_sup,  '
+                    . ' CASE WHEN (oii.partial_qty > 0 and oii.item_qty - oii.partial_qty > 0 and stock_Status = "0") THEN CONCAT("Stock In(", CONCAT(CONCAT(oii.partial_qty, \'/\'), CONCAT(oii.item_qty, \')\'))) WHEN oii.stock_status = "1" THEN "Stock Out" ELSE "Stock In" END AS stock_action,'
+                    . ' 1 as is_inv_sup,'
                     . 'mcb_inventory_item.use_length as item_use_length, mcb_inventory_item.qty as item_available_qty '
                     . 'FROM mcb_order_inventory_items AS oii '
                     . 'LEFT JOIN mcb_inventory_item ON oii.inventory_id = mcb_inventory_item.inventory_id '
@@ -1666,7 +1461,9 @@ class Mdl_Orders extends MY_Model {
             $sql_order_items = 'SELECT *, oii.order_item_id as id, '
                     . 'FORMAT((oii.item_qty * oii.item_supplier_price),2) AS item_subtotal, '
                     . 'oii.stock_status, '
-                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action, 0 as is_inv_sup '
+//                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action, '
+                    . ' CASE WHEN (oii.partial_qty > 0 and oii.item_qty - oii.partial_qty > 0 and stock_Status = "0") THEN CONCAT("Stock In(", CONCAT(CONCAT(oii.partial_qty, \'/\'), CONCAT(oii.item_qty, \')\'))) WHEN oii.stock_status = "1" THEN "Stock Out" ELSE "Stock In" END AS stock_action,'
+                    . ' 0 as is_inv_sup '
                     . 'FROM mcb_order_items AS oii '
                     . 'WHERE oii.order_id = "' . $order_id . '" '
                     . 'ORDER BY oii.item_order';
@@ -1684,7 +1481,8 @@ class Mdl_Orders extends MY_Model {
             $sql = 'SELECT *, FORMAT((oii.item_qty * oii.item_supplier_price),2) AS item_subtotal, '
                     . 'oii.order_item_id AS id, '
                     . 'oii.stock_status,'
-                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action, 1 as is_inv_sup,  '
+                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action,'
+                    . ' 1 as is_inv_sup, '
                     . 'mcb_inventory_item.use_length as item_use_length '
                     . 'FROM mcb_order_inventory_items AS oii '
                     . 'LEFT JOIN mcb_inventory_item ON oii.inventory_id = mcb_inventory_item.inventory_id '
@@ -1694,7 +1492,9 @@ class Mdl_Orders extends MY_Model {
             $sql = 'SELECT *, FORMAT((oii.item_qty * oii.item_supplier_price),2) AS item_subtotal, '
                     . 'oii.order_item_id AS id, '
                     . 'oii.stock_status, '
-                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action, 0 as is_inv_sup '
+                    . 'IF(oii.stock_status = "1", "Stock Out", "Stock In") AS stock_action,'
+                    . ' 0 as is_inv_sup '
+
                     . 'FROM mcb_order_items AS oii '
                     . 'WHERE oii.order_item_id = "' . $items->order_item_id . '"';
             $tableName = 'mcb_order_items';
@@ -1704,6 +1504,9 @@ class Mdl_Orders extends MY_Model {
         if($old_item->item_name != $items->item_name){
             if ($items->item_name !== '') {
                 $db_item = $this->common_model->get_row('mcb_inventory_item', array('name'=>span_to_mm($items->item_name), 'supplier_id'=>$items->supplier_id));
+                if($chk != '1'){
+                    $db_item = $this->common_model->get_row('mcb_inventory_item', array('name'=>span_to_mm($items->item_name)));
+                }
                 if(($db_item !== FALSE)){
                     $items->inventory_id = $db_item->inventory_id;
                     $items->item_name = $db_item->name;
@@ -1711,16 +1514,16 @@ class Mdl_Orders extends MY_Model {
                     $items->item_supplier_price = $db_item->supplier_price;
                     $items->item_supplier_description = $db_item->supplier_description;
                     $items->item_supplier_code = $db_item->supplier_code;
+                    //// use_length check
+                    if( $db_item->use_length < '1'){
+                        $items->item_per_meter = $db_item->supplier_price;
+                    }
                 }
             }
         }
         
         
-        
-        
-        
         if($items->use_length == '1'){
-            
             
             if ($items->item_length > '0') {
                 $items->item_supplier_price = $items->item_length*$items->item_per_meter;
@@ -1782,6 +1585,11 @@ class Mdl_Orders extends MY_Model {
             
         }
         
+        //If the length column is empty (Zero), when you change the $ on the per metre section the Price (AUD) should also change (and vice versa).
+        if( ( ($items->item_length == '0') || ($items->item_length == '') ) ){
+            $items->item_supplier_price = $items->item_per_meter;
+        }
+        
 //        echo '<pre>';
 //        print_r($items);
 //        exit;
@@ -1800,6 +1608,11 @@ class Mdl_Orders extends MY_Model {
             'item_length' => $items->item_length,
             'item_per_meter' => $items->item_per_meter
         );
+        
+        if($chk != '1'){
+            unset($itmeData['inventory_id']);
+        }
+        
         $condition = array('order_item_id' => $items->order_item_id);
         $this->update($tableName, $itmeData, $condition);
         
@@ -1849,10 +1662,10 @@ class Mdl_Orders extends MY_Model {
             'item_type' => '',
             'item_description' =>$item_description,
             'item_qty' =>'1',
-            'item_per_meter' => $item_supplier_price,
+            'item_per_meter' => floatval ( $item_supplier_price ),
             'item_supplier_code'=>$item->item_supplier_code,
             'item_supplier_description'=>$item->item_supplier_description,
-            'item_supplier_price' =>$item_supplier_price,
+            'item_supplier_price' => floatval ( $item_supplier_price ),
             'item_index' => '1',
         );
         
@@ -1905,11 +1718,179 @@ class Mdl_Orders extends MY_Model {
                 . "mcb_inventory_item.supplier_price AS item_supplier_price, mcb_inventory_item.description AS description, qty, "
                 . "mcb_inventory_item.name AS item_name, mcb_inventory_item.name AS label, mcb_inventory_item.description AS item_description "
                 . "FROM mcb_inventory_item "
-                . "WHERE (mcb_inventory_item.name LIKE '%".$search_string."%') AND mcb_inventory_item.supplier_id = '".$supplier_id."' and is_arichved='0' and inventory_type='0'"
+                . "WHERE (mcb_inventory_item.name LIKE '%".$search_string."%') AND mcb_inventory_item.supplier_id = '".$supplier_id."' and is_arichved !='1' and inventory_type !='1'"
                 . "LIMIT 5";
         return $this->query_object($qry);
     }
     
+    
+    function download_order_items( $id, $name, $data ) {
+        
+        
+        
+        $order_number = $data['order_amounts']->order_number;
+        $file_name = "{$name}_{$order_number}.csv";
+        
+        
+        
+        $heading = array(
+            'Cat. #',
+            'Supplier Cat#',
+            'Type',
+            'Supplier Description',
+            'Per Meter',
+            'Length',
+            'Qty',
+            'Price',
+            'Subtotal'
+        );
+        
+        //generating csv file
+        
+        $delimiter = ',';
+        $enclosure = '"';
+        header("Content-Transfer-Encoding: UTF-8");
+        header('Content-type: text/csv');
+        header('Content-Disposition: attachment; filename="' . $file_name . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $file = fopen('php://output', 'w');
+        
+        fputcsv($file, $heading, $delimiter, $enclosure);
+        foreach ( $data['items'] as $item) {
+            if( ($item->item_qty == '0.00') && ($item->item_name == '') ){
+                $item->item_qty = "";
+            }
+            if( $item->item_per_meter == '0.00' ){
+                $item->item_per_meter = "";
+            }
+            if( $item->item_supplier_price == '0.00' ){
+                $item->item_supplier_price = "";
+            }else{
+                $item->item_supplier_price = display_currency( $item->item_supplier_price );
+            }
+            
+            if( $item->item_subtotal == '0.00' ){
+                $item->item_subtotal = "";
+            } else {
+                $item->item_subtotal = display_currency( $item->item_subtotal );
+            }
+            
+            $item->item_name = str_replace(array( '<span>', '</span>', ), ' ', $item->item_name);
+            $item->item_description = str_replace(array( '<span>', '</span>', ), ' ', $item->item_description);
+            $item->item_supplier_code = str_replace(array( '<span>', '</span>', ), ' ', $item->item_supplier_code);
+            
+            $line = array(
+                ($item->item_name),
+                ($item->item_supplier_code),
+                ($item->item_type),
+                ($item->item_description),
+                ($item->item_per_meter),
+                ($item->item_length),
+                ($item->item_qty),
+                ($item->item_supplier_price),
+                ($item->item_subtotal)
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+        }
+        $line = array(
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
+        );
+        fputcsv($file, $line, $delimiter, $enclosure);
+        $title_count = 0;
+        foreach ($data['order_amounts'] as $amount ) {
+            if( $title_count == 0 ){
+                $f_title = 'Subtotal';
+                $amount = $data['order_amounts']->order_sub_total;
+            }elseif( $title_count == 1 ){
+                $f_title = 'Tax';
+                $amount = $data['order_amounts']->tax_total;
+            }else{
+                $f_title = 'Total';
+                $amount = $data['order_amounts']->order_total;
+            }
+            $line = array(
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                $f_title,
+                $amount
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+            $title_count++;
+            if($title_count == 3){
+                break;
+            }
+        }
+        fclose($file);
+        $datao = array(
+                'order_id' => $id,
+                'user_id' => $this->session->userdata('user_id'),
+                'created_date' => date('Y-m-d H:i:s'),
+                'order_history_data' => "Downloaded {$file_name}",
+            );
+        $this->common_model->insert('mcb_order_history', $datao);
+        return TRUE;
+    }
+    
+    function download_all_csv($data_arr) {
+        
+        $heading = array(
+            'Status',
+            'Order #',
+            'Date',
+            'Supplier',
+            'Quote #',
+            'Project',
+            'Cur',
+            'Total',
+            'Supplier Invoice Number'
+        );
+        
+        $delimiter = ',';
+        $enclosure = '"';
+        header('Content-type: text/csv');
+        header('Content-Disposition: attachment; filename="Orders.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $file = fopen('php://output', 'w');
+        fputcsv($file, $heading, $delimiter, $enclosure);
+        foreach ( $data_arr as $item) {
+            $line = array(
+                ($item->s),
+                ($item->n),
+                ( date('d/m/Y', $item->e) ),
+                ($item->c),
+                ($item->qn),
+                ($item->p),
+                ($item->cur),
+                (iconv("UTF-8", "CP1252", $item->total )),
+                ($item->supplier_invoice_number),
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+        }
+        exit();
+    }
+    
+    function order_save_to_history($order_id, $saved_message) {   
+        $h_data = array(
+            'user_id' => $this->session->userdata('user_id'),
+            'order_id' => $order_id,
+            'created_date' => date('Y-m-d H:i:s'),
+            'order_history_data' => $saved_message
+        );
+        $this->db->insert('mcb_order_history', $h_data);
+    }
 }
 
-?>

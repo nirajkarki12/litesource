@@ -16,50 +16,68 @@ class Orders extends Admin_Controller {
         $this->load->helper('text');
         $this->_post_handler();
         $this->redir->set_last_index();
-        $params = array(
-            'paginate' => TRUE,
-            'limit' => $this->mdl_mcb_data->setting('results_per_page'),
-            'page' => uri_assoc('page')
-        );
-        $order_by = uri_assoc('order_by');
+        // $params = array(
+        //     'paginate' => TRUE,
+        //     'limit' => $this->mdl_mcb_data->setting('results_per_page'),
+        //     'page' => uri_assoc('page')
+        // );
+        
+        //$params['limit'] = '20000';
+        
+        // $order_by = uri_assoc('order_by');
         /*
          * Always include order_date_entered and order_number in the sort  
          */
-        $default_order_by = 'FROM_UNIXTIME(order_date_entered) DESC, order_number DESC';
-        switch ($order_by) {
-            case 'invoice':
-                $params['order_by'] = 'invoice_number DESC, ';
-                break;
-            case 'project':
-                $params['order_by'] = 'project_name, ';
-                break;
-            case 'supplier':
-                $params['order_by'] = 'client_name, ';
-                break;
-            case 'status':
-                $params['order_by'] = 'order_status_id, ';
-                break;
-            case 'order_number':
-                $params['order_by'] = 'order_number DESC, ';
-                break;
-            default:
-                $params['order_by'] = '';
-        }
+        // $default_order_by = 'FROM_UNIXTIME(order_date_entered) DESC, order_number DESC';
+        // switch ($order_by) {
+        //     case 'invoice':
+        //         $params['order_by'] = 'invoice_number DESC, ';
+        //         break;
+        //     case 'project':
+        //         $params['order_by'] = 'project_name, ';
+        //         break;
+        //     case 'supplier':
+        //         $params['order_by'] = 'client_name, ';
+        //         break;
+        //     case 'status':
+        //         $params['order_by'] = 'order_status_id, ';
+        //         break;
+        //     case 'order_number':
+        //         $params['order_by'] = 'order_number DESC, ';
+        //         break;
+        //     default:
+        //         $params['order_by'] = '';
+        // }
 
-        $params['order_by'] .= $default_order_by;
+        // $params['order_by'] .= $default_order_by;
 
-        $data = array(
-            'orders' => $this->mdl_orders->get($params),
-            'sort_links' => TRUE,
-            'order_by' => $params['order_by']
+        $client_params['select'] = "mcb_clients.client_id id, mcb_clients.client_name n, mcb_clients.client_tax_rate_id t, mcb_clients.client_active a";
+        $project_params['select'] = "project_id id, project_name n, project_active a";
+
+        $this->load->model(
+                array(
+                    'clients/mdl_clients',
+                    'projects/mdl_projects',
+                    'invoice_statuses/mdl_invoice_statuses',
+                )
         );
+        $data = array(
+            'suppliers' => json_encode($this->mdl_clients->get($client_params)),
+            'projects' => json_encode($this->mdl_projects->get($project_params)),
+            'order_statuses' => json_encode($this->mdl_invoice_statuses->get()),
+        );
+
+        // $data = array(
+        //     'orders' => $this->mdl_orders->get($params),
+        //     'sort_links' => TRUE,
+        //     'order_by' => $params['order_by']
+        // );
 
         $this->load->view('index', $data);
     }
 
     function edit() {
         
-//        error_reporting(E_ALL); ini_set('display_errors', 1);
         $tab_index = ($this->session->flashdata('tab_index')) ? $this->session->flashdata('tab_index') : 0;
         $this->_post_handler();
         $this->redir->set_last_index();
@@ -86,8 +104,10 @@ class Orders extends Admin_Controller {
                 //'debug' => TRUE
             );
             $order = $this->mdl_orders->get($params);
-            //echo '<pre>'; print_r($order); exit;
-            //$this->mdl_addresses->prep_validation($order->order_address_id);
+            if($order->order_date_emailed > '1'){
+                $order->order_date_entered = $order->order_date_emailed;
+            }
+            
         }
         if (!isset($order)) {
             redirect('dashboard/record_not_found');
@@ -109,9 +129,6 @@ class Orders extends Admin_Controller {
             //'order_inventory_null' => $this->mdl_orders->order_inventory_null($order_id),
             'user_list' => $this->common_model->get_all_as_object('mcb_users')
         );
-//        echo "<pre>";
-//        print_r($data);
-//        die();
         $this->load->view('order_edit', $data);
     }
     
@@ -136,7 +153,8 @@ class Orders extends Admin_Controller {
         } else {
             $invoice_id = 0;
             $supplier = $this->common_model->query_as_row('SELECT client_id, client_name, client_tax_rate_id FROM mcb_clients WHERE client_id = "'.$this->input->post('supplier_id').'"');
-            $order_id = $this->mdl_orders->create_supplier_order($supplier, $this->input->post('contact_name'), $invoice_id, $this->input->post('project_id'), $this->input->post('order_date_entered'), TRUE,'1', TRUE);
+            $order_id = $this->mdl_orders->create_supplier_order($supplier, $invoice_id);
+            //$order_id = $this->mdl_orders->create_supplier_order($supplier, $this->input->post('contact_name'), $invoice_id, $this->input->post('project_id'), $this->input->post('order_date_entered'), TRUE,'1', TRUE);
             redirect('orders/edit/order_id/' . $order_id);
         }
     }
@@ -154,33 +172,31 @@ class Orders extends Admin_Controller {
     }
 
     function get_orders_JSON($params = NULL) {
-
+        
         $limit = $this->input->post('limit');
         $offset = $this->input->post('offset');
+        $filters = $this->input->post('filters');
 
-        $client_params['select'] = "mcb_clients.client_id id, mcb_clients.client_name n, mcb_clients.client_tax_rate_id t, mcb_clients.client_active a";
-        //$client_params['debug'] = 1;
-
-        $project_params['select'] = "project_id id, project_name n, project_active a";
-        
         $this->load->model(
                 array(
-                    'clients/mdl_clients',
-                    'projects/mdl_projects',
-                    //'tax_rates/mdl_tax_rates',
-                    //'currencies/mdl_currencies',
                     'invoice_statuses/mdl_invoice_statuses',
                 )
         );
-        $data = array(
-            'suppliers' => $this->mdl_clients->get($client_params),
-            //'suppliers'	        => $this->mdl_clients->get_active_suppliers(),
-            'projects' => $this->mdl_projects->get($project_params),
-            //'tax_rates'		=> $this->mdl_tax_rates->get(),
-            //'currencies'		=> $this->mdl_currencies->get(),
-            'order_statuses' => $this->mdl_invoice_statuses->get(),
-            'orders' => $this->mdl_orders->get_raw($limit, $offset)
-        );
+
+        $order_statuses = $this->mdl_invoice_statuses->get();
+
+        if($filters && is_array($filters) && count($filters) > 0){
+            if(array_key_exists('order_status', $filters) && $filters['order_status'] != 'false'){
+                foreach ($order_statuses as $status) {
+                    $filter_status = $filters['order_status'];
+                    if(preg_match("/$filter_status/i", $status->invoice_status)){
+                        $filters['order_status'] = $status->invoice_status_id;
+                    }
+                }
+            }
+        }
+        
+        $data =  $this->mdl_orders->get_orders($limit, $offset, $filters);
         echo json_encode($data);
     }
     
@@ -213,7 +229,6 @@ class Orders extends Admin_Controller {
     }
 
     function _post_handler() {
-        
         if ($this->input->post('btn_add_order')) {
             
             redirect('orders/create');
@@ -249,6 +264,8 @@ class Orders extends Admin_Controller {
             
             $email_url = 'mailer/order_mailer/form/order_id/' . uri_assoc('order_id');
             redirect($email_url);
+        }elseif ($this->input->post('download_order_items')) {
+            $this->download_order_items( uri_assoc('order_id') );
         }
     }
     
@@ -268,6 +285,8 @@ class Orders extends Admin_Controller {
     
     
     function getOrderItemsJSON() {
+        
+        //ini_set('display_errors', 1); ini_set('display_startup_errors', 1); error_reporting(E_ALL);
         
         $order_id = $this->input->post('order_id');
         $items = $this->mdl_orders->get_order_items_JSON($order_id);
@@ -388,53 +407,155 @@ class Orders extends Admin_Controller {
     function insert_id_by_name() {
         
         $all_inventry_itms = $this->mdl_orders->query_object('SELECT * FROM `mcb_order_inventory_items`');
-        
         $c = 0;
         foreach ($all_inventry_itms as $value) {
-            
             if($value->inventory_id == '0'){
-                
                 echo '<br>'.$c++.'--->>'.$name_inven = $this->mdl_orders->get_Row('mcb_order_inventory_items', array('item_name' => $value->item_name))->item_name;
-                
                 $r = $this->mdl_orders->get_Row('mcb_inventory_item', array('name' => $name_inven));
-                
                 $data=array(
                     'inventory_id'=>$r->inventory_id,
                     'item_supplier_code'=>$r->supplier_code,
                     'item_supplier_description'=>$r->supplier_description,
                 );
-                
                 $data2=array(
 //                    'inventory_id'=>$r->inventory_id,
                     'item_supplier_code'=>$value->item_name,
                     'item_supplier_description'=>$value->item_description,
                 );
-                
-                
-                
                 if($r != NULL){
                     // $this->mdl_orders->update('mcb_order_inventory_items', $data, array('item_name' => $value->item_name));
                 }else{
                     // $this->mdl_orders->update('mcb_order_inventory_items', $data2, array('item_name' => $value->item_name));
                 }
-                
-                
                 echo '<br>id ---'.$r->inventory_id;
                 echo '<br>order id ---'.$value->order_id;
                 echo '<br>name---'.$r->name;
                 echo '<br>supplier_code---'.$r->supplier_code;
                 echo '<br>';
-                echo '<br>';
-                
+                echo '<br>';   
+            }   
+        }
+    }
+    
+    function download_order_items( $id ){
+        $items = $this->mdl_orders->get_order_items_JSON( $id );
+        $data = array(
+            'items' => (is_array($items->sql_order_items)?$items->sql_order_items:array()),
+            'order_amounts' => $items->sql_order_amount,
+        );
+        $this->mdl_orders->download_order_items( $id, ucfirst( 'order' ), $data );
+        exit();
+    }
+    
+    function export_selected_items() {
+        
+        $delimiter = ',';
+        $enclosure = '"';
+        header("Content-Transfer-Encoding: UTF-8");
+        header('Content-type: text/csv');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $file = fopen('php://output', 'w');
+        
+        $heading = array(
+            'Cat. #',
+            'Supplier Cat#',
+            'Type',
+            'Supplier Description',
+            'Per Meter',
+            'Length',
+            'Qty',
+            'Price',
+            'Subtotal'
+        );
+        fputcsv($file, $heading, $delimiter, $enclosure);
+        if( isset($_POST['items_to_csv_export']) ){
+            $items = $_POST['items_to_csv_export'];
+            foreach ($items as $item) {
+                $item = (object)$item;
+                if( ($item->item_qty == '0.00') && ($item->item_name == '') ){
+                    $item->item_qty = "";
+                }
+                if( $item->item_per_meter == '0.00' ){
+                    $item->item_per_meter = "";
+                }
+                if( $item->item_supplier_price == '0.00' ){
+                    $item->item_supplier_price = "";
+                }else{
+                    $item->item_supplier_price = display_currency( $item->item_supplier_price );
+                }
+                if( $item->item_subtotal == '0.00' ){
+                    $item->item_subtotal = "";
+                } else {
+                    $item->item_subtotal = display_currency( $item->item_subtotal );
+                }
+                $item->item_name = str_replace(array( '<span>', '</span>', ), ' ', $item->item_name);
+                $item->item_description = str_replace(array( '<span>', '</span>', ), ' ', $item->item_description);
+                $item->item_supplier_code = str_replace(array( '<span>', '</span>', ), ' ', $item->item_supplier_code);
+                $line = array(
+                    ($item->item_name),
+                    ($item->item_supplier_code),
+                    ($item->item_type),
+                    ($item->item_description),
+                    ($item->item_per_meter),
+                    ($item->item_length),
+                    ($item->item_qty),
+                    ($item->item_supplier_price),
+                    ($item->item_subtotal)
+                );
+                fputcsv($file, $line, $delimiter, $enclosure);                
+            }
+        }
+        fclose($file);
+        echo json_encode($file);
+        exit;
+    }
+    
+    function download_all_csv() {
+        
+        $clients = $this->common_model->query_as_array('SELECT client_id id,  client_name n, client_state cs, client_active a, client_tax_rate_id t, client_active a FROM mcb_clients ORDER BY client_name ASC');
+        //$contact = $this->common_model->query_as_array('SELECT contact_id id, contact_name n, contact_active a FROM mcb_contacts ORDER BY contact_name ASC');
+        $project = $this->common_model->query_as_array('SELECT project_id id, project_name pn, project_specifier ps, project_active a FROM mcb_projects ORDER BY project_name ASC');
+        $invoice_statuses = $this->common_model->query_as_array('SELECT * FROM mcb_invoice_statuses');
+        $data = $this->mdl_orders->get_raw(20000);
+        $res_obj_arr = [];
+        foreach ($data as $va) {   
+            /////////////status//////////////
+            $status_id_key = array_search($va->s,  array_column($invoice_statuses, 'invoice_status_id') );
+            $va->s = $invoice_statuses[$status_id_key]['invoice_status'];
+            
+            /////////////clients//////////////
+            $client_id_key = array_search($va->c,  array_column($clients, 'id') );
+            $va->c = $clients[$client_id_key]['n'];
+            if( ($va->c == '') || ($va->c == NULL) ){
+                $va->c = '(deleted)';
             }
             
-            
+            /////////////projects and specifier//////////////
+            if( $va->p > 0 ){
+                $project_id_key = array_search($va->p,  array_column($project, 'id') );
+                $va->p = $project[$project_id_key]['pn'];
+            }else{
+                $va->p = '(deleted)';
+            }
+            $res_obj_arr[] = $va;
         }
-        
-        
+        $this->mdl_orders->download_all_csv($res_obj_arr);
+        exit;
     }
+    
     function php_info() {
         echo phpinfo();
+    }
+    
+    function one_time() {
+        $q = "SELECT order_id, invoice_id FROM `mcb_orders` WHERE i_invoice_number is null AND invoice_id > '0'";
+        $rr = $this->common_model->query_as_object($q);
+        foreach ($rr as $value) {
+            $i_i_num = $this->mdl_orders->get_i_invoice_number($value->invoice_id);
+            $this->common_model->update('mcb_orders', array('i_invoice_number'=>$i_i_num), array('order_id'=>$value->order_id));
+        }
+        echo 'finish';
     }
 }
 

@@ -76,15 +76,22 @@ class MY_Model extends CI_Model {
         if (isset($params['where']) and is_array($params['where']) and isset($params['where'][$this->primary_key])) {
 
             // return a single row if the primary key exists in the where element
-            return $query->row();
+            if( $query ){
+                return $query->row();
+            }
+            return false;
+            
         } elseif (isset($params['return_row']) and $params['return_row'] == TRUE) {
 
             return $query->row();
         } else {
 
             // otherwise return a full result set
-            return $query->result();
+            if( $query ){
+                return $query->result();
+            }
         }
+        return false;
     }
 
     function get_by_id($id) {

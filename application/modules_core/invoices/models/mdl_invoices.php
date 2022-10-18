@@ -21,7 +21,7 @@ class Mdl_Invoices extends MY_Model {
         $this->primary_key = 'mcb_invoices.invoice_id';
 
         $this->order_by = 'FROM_UNIXTIME(mcb_invoices.invoice_date_entered) DESC, mcb_invoices.invoice_id DESC';
-
+        //$this->load->model('delivery_dockets/mdl_delivery_dockets');
         $this->select_fields = "
 		SQL_CALC_FOUND_ROWS
 		mcb_invoices.*,
@@ -30,35 +30,35 @@ class Mdl_Invoices extends MY_Model {
 		mcb_clients.client_active,
 		IFNULL(mcb_clients.client_name, IF(mcb_invoices.client_id <> 0, '(deleted)', NULL)) client_name,
 		mcb_clients.client_email_address,
-        mcb_tax_rates.tax_rate_name,
+                mcb_tax_rates.tax_rate_name,
 		mcb_tax_rates.tax_rate_percent,
 		CONCAT(FORMAT(mcb_tax_rates.tax_rate_percent, 0),'% ', mcb_tax_rates.tax_rate_name) tax_rate_percent_name,
 		IFNULL(mcb_contacts.contact_name, IF(mcb_invoices.contact_id <> 0, '(deleted)', NULL)) contact_name,
 		mcb_contacts.email_address AS contact_email_address,
 		mcb_contacts.contact_active,
 		IFNULL(prj.project_name, IF(mcb_invoices.project_id <> 0, '(deleted)', '-')) AS project_name,
-        prj.project_specifier,	
+                prj.project_specifier,	
 		IFNULL(prj.project_active, 1) AS project_active,
 		cg.client_group_name, 
 		cg.client_group_discount_percent,
 		q.invoice_number invoice_quote_number,
 		mcb_users.username,
-	    mcb_users.company_name AS from_company_name,
-	    mcb_users.last_name AS from_last_name,
-	    mcb_users.first_name AS from_first_name,
-	    mcb_users.address AS from_address,
+                mcb_users.company_name AS from_company_name,
+                mcb_users.last_name AS from_last_name,
+                mcb_users.first_name AS from_first_name,
+                mcb_users.address AS from_address,
 		mcb_users.address_2 AS from_address_2,
-	    mcb_users.city AS from_city,
-	    mcb_users.state AS from_state,
-	    mcb_users.zip AS from_zip,
+                mcb_users.city AS from_city,
+                mcb_users.state AS from_state,
+                mcb_users.zip AS from_zip,
 		mcb_users.country AS from_country,
-	    mcb_users.phone_number AS from_phone_number,
+                mcb_users.phone_number AS from_phone_number,
 		mcb_users.mobile_number AS from_mobile_number,
 		mcb_users.email_address AS from_email_address,
 		mcb_users.web_address AS from_web_address,
 		mcb_users.tax_id_number AS from_tax_id_number,
 		mcb_invoice_statuses.*,
-        IF(mcb_invoices.invoice_status_id = 2, IF(mcb_invoices.invoice_due_date < UNIX_TIMESTAMP(), 1, 0), 0) AS invoice_is_overdue,
+                IF(mcb_invoices.invoice_status_id = 2, IF(mcb_invoices.invoice_due_date < UNIX_TIMESTAMP(), 1, 0), 0) AS invoice_is_overdue,
 		(DATEDIFF(FROM_UNIXTIME(UNIX_TIMESTAMP()),FROM_UNIXTIME(mcb_invoices.invoice_due_date))) AS invoice_days_overdue";
 
         /*
@@ -182,6 +182,7 @@ class Mdl_Invoices extends MY_Model {
 
         $invoices = parent::get($params);
 
+//        echo '<pre>'; print_r($params); exit;
         if (is_array($invoices)) {
 
             foreach ($invoices as $invoice) {
@@ -597,6 +598,235 @@ class Mdl_Invoices extends MY_Model {
         return $query->result();
     }
 
+    public function get_quotes_records($limit = NULL, $offset = '0', $filters = []) {
+
+        $select = "
+            i.invoice_id id,
+            i.client_id c,
+            i.project_id p,
+            i.contact_id ct,
+            i.user_id u,
+            i.invoice_number n,
+            IF(i.invoice_status_id = 2, IF(i.invoice_due_date < UNIX_TIMESTAMP(), 4, i.invoice_status_id), i.invoice_status_id) s,
+            i.invoice_tax_rate_id t,
+            CONCAT('', FORMAT(t.invoice_total,2)) a,
+            i.invoice_client_group_id g,
+            IF( (i.invoice_date_emailed > '1'), i.invoice_date_emailed, i.invoice_date_entered) e,
+            i.invoice_due_date d,
+            i.invoice_is_quote q,
+            i.invoice_quote_id qi,
+            q.invoice_number qn,
+            i.invoice_client_order_number po,
+
+            TRIM(client.client_name) cl_n, client.client_state cl_s, client.client_active cl_a,
+            contract.contact_name co_n, contract.contact_active co_a,
+            project.project_name pr_n, project.project_specifier pr_s, project.project_active pr_a
+            ";
+
+        $sql = "SELECT $select 
+                FROM mcb_invoices AS i
+                JOIN mcb_invoice_amounts AS t ON t.invoice_id = i.invoice_id 
+                LEFT JOIN mcb_invoices AS q ON q.invoice_id = i.invoice_quote_id 
+                LEFT JOIN mcb_clients AS client ON client.client_id = i.client_id 
+                LEFT JOIN mcb_contacts AS contract ON contract.contact_id = i.contact_id 
+                LEFT JOIN mcb_projects AS project ON project.project_id = i.project_id 
+                WHERE `i`.`invoice_is_quote` = '1'"
+                ;
+
+        $status_cond = null;
+        $where_cond = null;
+        $filter_added = false;
+
+        if($filters && is_array($filters) && count($filters) > 0){
+            if(array_key_exists('client_name', $filters) && $filters['client_name'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(client.client_name) LIKE '%%%s%%'", strtolower($filters['client_name']));
+            }
+            if(array_key_exists('invoice_date', $filters) && $filters['invoice_date'] != 'false'){
+                $where_cond .= " AND DATE_FORMAT(FROM_UNIXTIME(IF( (i.invoice_date_emailed > '1'), i.invoice_date_emailed, i.invoice_date_entered)), '%d/%m/%Y') LIKE '%" .$filters['invoice_date'] ."%'";
+            }
+            if(array_key_exists('invoice_number', $filters) && $filters['invoice_number'] != 'false'){
+                $where_cond .= sprintf(" AND i.invoice_number LIKE '%%%s%%'", $filters['invoice_number']);
+            }
+            if(array_key_exists('invoice_quote', $filters) && $filters['invoice_quote'] != 'false'){
+                $where_cond .= sprintf(" AND q.invoice_number LIKE '%%%s%%'", $filters['invoice_quote']);
+            }
+            if(array_key_exists('project_name', $filters) && $filters['project_name'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(project.project_name) LIKE '%%%s%%'", strtolower($filters['project_name']));
+            }
+            if(array_key_exists('project_specifier', $filters) && $filters['project_specifier'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(project.project_specifier) LIKE '%%%s%%'", strtolower($filters['project_specifier']));
+            }
+            if(array_key_exists('invoice_amount', $filters) && $filters['invoice_amount'] != 'false'){
+                $where_cond .= sprintf(" AND CONCAT('$', FORMAT(t.invoice_total,2)) LIKE '%%%s%%'", $filters['invoice_amount']);
+            }
+            if(array_key_exists('invoice_status', $filters) && $filters['invoice_status'] != 'false'){
+                $status_cond = sprintf(" AND s = '%s'", $filters['invoice_status']);
+                $filter_added = true;
+            }
+        }
+
+        if($where_cond){
+            $filter_added = true;
+            $sql .= $where_cond;
+        }
+
+        $sql .= " ORDER BY IF( (i.invoice_date_emailed > '1'), i.invoice_date_emailed, i.invoice_date_entered) DESC, i.invoice_id DESC LIMIT $offset, $limit";
+
+        $sql = "SELECT SQL_CALC_FOUND_ROWS a.* FROM ($sql) a WHERE 1=1 $status_cond LIMIT $limit";
+        // echo $sql;
+        $query = $this->db->query($sql);
+
+        // echo $this->db->last_query();
+
+        $invoices = $query->result();
+
+        return ['invoices' => $invoices, 'total_data' => count($invoices), 'filters' => $filter_added];
+    }
+
+    public function get_invoices_records($limit = NULL, $offset = '0', $filters = []) {
+
+        $select = "
+            i.invoice_id id,
+            i.client_id c,
+            i.project_id p,
+            i.contact_id ct,
+            i.user_id u,
+            i.invoice_number n,
+            IF(i.invoice_status_id = 2, IF(i.invoice_due_date < UNIX_TIMESTAMP(), 4, i.invoice_status_id), i.invoice_status_id) s,
+            i.invoice_tax_rate_id t,
+            CONCAT('', FORMAT(t.invoice_total,2)) a,
+            i.invoice_client_group_id g,
+            i.invoice_date_entered e,
+            i.invoice_due_date d,
+            i.invoice_is_quote q,
+            i.invoice_quote_id qi,
+            q.invoice_number qn,
+            i.invoice_client_order_number po,
+            i.smart_status mc,
+            (select count(docket_id) from mcb_delivery_dockets 
+                where mcb_delivery_dockets.invoice_id = i.invoice_id) as docket_count,
+            TRIM(client.client_name) cl_n, client.client_state cl_s, client.client_active cl_a,
+            contract.contact_name co_n, contract.contact_active co_a,
+            project.project_name pr_n, project.project_specifier pr_s, project.project_active pr_a
+            ";
+
+        $sql = "SELECT SQL_CALC_FOUND_ROWS $select 
+                FROM mcb_invoices AS i
+                JOIN mcb_invoice_amounts AS t ON t.invoice_id = i.invoice_id 
+                LEFT JOIN mcb_invoices AS q ON q.invoice_id = i.invoice_quote_id 
+                LEFT JOIN mcb_clients AS client ON client.client_id = i.client_id 
+                LEFT JOIN mcb_contacts AS contract ON contract.contact_id = i.contact_id 
+                LEFT JOIN mcb_projects AS project ON project.project_id = i.project_id 
+                WHERE `i`.`invoice_is_quote` = '0'"
+                ;
+
+        $where_cond = null;
+        $filter_added = false;
+        $status_filter = false;
+
+        if($filters && is_array($filters) && count($filters) > 0){
+            if(array_key_exists('client_name', $filters) && $filters['client_name'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(client.client_name) LIKE '%%%s%%'", strtolower($filters['client_name']));
+            }
+            if(array_key_exists('invoice_date', $filters) && $filters['invoice_date'] != 'false'){
+                $where_cond .= " AND DATE_FORMAT(FROM_UNIXTIME(i.invoice_date_entered), '%d/%m/%Y') LIKE '%" .$filters['invoice_date'] ."%'";
+            }
+            if(array_key_exists('invoice_number', $filters) && $filters['invoice_number'] != 'false'){
+                $where_cond .= sprintf(" AND i.invoice_number LIKE '%%%s%%'", $filters['invoice_number']);
+            }
+            if(array_key_exists('invoice_quote', $filters) && $filters['invoice_quote'] != 'false'){
+                $where_cond .= sprintf(" AND q.invoice_number LIKE '%%%s%%'", $filters['invoice_quote']);
+            }
+            if(array_key_exists('project_name', $filters) && $filters['project_name'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(project.project_name) LIKE '%%%s%%'", strtolower($filters['project_name']));
+            }
+            if(array_key_exists('project_specifier', $filters) && $filters['project_specifier'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(project.project_specifier) LIKE '%%%s%%'", strtolower($filters['project_specifier']));
+            }
+            if(array_key_exists('invoice_amount', $filters) && $filters['invoice_amount'] != 'false'){
+                $where_cond .= sprintf(" AND CONCAT('$', FORMAT(t.invoice_total,2)) LIKE '%%%s%%'", $filters['invoice_amount']);
+            }
+            if(array_key_exists('docket_count', $filters) && $filters['docket_count'] != 'false'){
+                $where_cond .= sprintf(" AND (select count(docket_id) from mcb_delivery_dockets 
+                where mcb_delivery_dockets.invoice_id = i.invoice_id) = '%s'", $filters['docket_count']);
+            }
+            if(array_key_exists('client_state', $filters) && $filters['client_state'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(client.client_state) LIKE '%%%s%%'", strtolower($filters['client_state']));
+            }
+            if(array_key_exists('client_po', $filters) && $filters['client_po'] != 'false'){
+                $where_cond .= sprintf(" AND LOWER(i.invoice_client_order_number) LIKE '%%%s%%'", strtolower($filters['client_po']));
+            }
+            if(array_key_exists('owing_amount', $filters) && $filters['owing_amount'] != 'false'){
+                $where_cond .= sprintf(" AND CONCAT('$', FORMAT(t.invoice_total,2)) LIKE '%%%s%%'", $filters['owing_amount']); //need work
+            }
+            if(array_key_exists('invoice_status', $filters) && $filters['invoice_status'] != 'false'){
+                $filter_added = true;
+                $status_filter = true;
+//                $where_cond .= sprintf(" AND (IF(i.invoice_status_id = 2, IF(i.invoice_due_date < UNIX_TIMESTAMP(), 4, i.invoice_status_id), i.invoice_status_id)) = '%s'", $filters['invoice_status']);
+            }
+        }
+
+        if($where_cond){
+            $filter_added = true;
+            $sql .= $where_cond;
+        }
+        
+        if($status_filter){
+            $sql .= " ORDER BY i.invoice_date_entered DESC, i.invoice_id DESC";
+        }else{
+            $sql .= " ORDER BY i.invoice_date_entered DESC, i.invoice_id DESC LIMIT $offset, $limit";
+        }
+
+        // echo $sql;
+        $query = $this->db->query($sql);
+
+        $this->load->model('delivery_dockets/mdl_delivery_dockets');
+        $invoices = $query->result();
+
+        if($invoices) {
+            $invoices_arr = array();
+            foreach ($invoices as $detail) {
+                $detail->s = $this->mdl_invoices->getInvoiceStatusId($detail->id);
+                
+                $detail->ship_odr = 0;
+                //$detail->p_aok = 999999;
+                $t_amt = (float) str_replace(",", "", $detail->a);
+                $detail->owng_amt = $t_amt;
+                $detail->p_a = $this->mdl_invoices->invoice_paid_amount($detail->id);
+                if ($detail->p_a > 0) {
+                    //$detail->p_aok = ((float) ($t_amt) - (float) ($detail->p_a));
+                    $detail->owng_amt = (float) ($t_amt) - (float) ($detail->p_a);
+                    if(round($detail->owng_amt, 2) > 0 ){
+                        if($detail->s != '3'){
+                            $rem_amount = round( ((float) ($t_amt) - (float) ($detail->owng_amt)), 2);
+                            if( $rem_amount > 0 ){
+                                $detail->ship_odr = $rem_amount;
+                            }
+                        }
+                    }
+                }
+                $detail->owng_amt = number_format($detail->owng_amt, 2);
+                if ($detail != NULL) {
+                    $invoices_arr[] = $detail;
+                }
+            }
+            
+            if($status_filter){
+                $invoices_arr = array_filter($invoices_arr, function($item) use ($filters){
+                    if($item->s == $filters['invoice_status']){
+                        return $item;
+                    }
+                });
+                $invoices_arr = array_values($invoices_arr);
+                $invoices_arr = array_splice($invoices_arr, $offset, $limit);
+            }
+
+            $invoices = $invoices_arr;
+        }
+
+        return ['invoices' => $invoices, 'total_data' => count($invoices), 'filters' => $filter_added];
+    }
+
     public function search_by_product($is_quote, $item_name, $item_description) {
 
         $this->db->select('mcb_invoices.invoice_id id', FALSE);
@@ -722,12 +952,14 @@ class Mdl_Invoices extends MY_Model {
     }
 
     public function save_invoice_options($custom_fields = NULL) {
-
+        
+        
+        $history_msg = $this->lang->line('saved_invoice_options');
 
         $invoice_id = uri_assoc('invoice_id');
 
         $invoice = $this->get_by_id($invoice_id);
-
+        
         // Can only save details if invoice is open
         if ($invoice->invoice_status_type == 1) {
 
@@ -748,14 +980,20 @@ class Mdl_Invoices extends MY_Model {
                 'project_id' => $this->input->post('project_id'),
                 'contact_id' => $this->input->post('contact_id'),
                 'invoice_client_group_id' => $new_client_group_id,
-                'invoice_date_entered' => strtotime(standardize_date($this->input->post('invoice_date_entered'))),
+                //'invoice_date_entered' => strtotime(standardize_date($this->input->post('invoice_date_entered'))),
                 'invoice_notes' => $this->input->post('invoice_notes'),
                 'user_id' => $this->input->post('user_id'),
                 'invoice_number' => $this->input->post('invoice_number'),
                 'invoice_client_order_number' => $this->input->post('client_order_number'),
                 'invoice_payment_terms' => $this->input->post('invoice_payment_terms')
             );
-
+            
+            if ( ($invoice->invoice_is_quote == '1') && ($invoice->invoice_date_emailed > '1') ) {
+                $db_array['invoice_date_emailed'] = strtotime(standardize_date($this->input->post('invoice_date_entered')));
+            } else {
+                $db_array['invoice_date_entered'] = strtotime(standardize_date($this->input->post('invoice_date_entered')));
+            }
+            
             if (is_numeric($this->input->post('invoice_tax_rate_id'))) {
 
                 $db_array['invoice_tax_rate_id'] = $this->input->post('invoice_tax_rate_id');
@@ -777,6 +1015,10 @@ class Mdl_Invoices extends MY_Model {
             $db_array['smart_status'] = '1';
             if (is_numeric($this->input->post('invoice_status_id'))) {
                 $db_array['invoice_status_id'] = $this->input->post('invoice_status_id');
+                if($invoice->invoice_status_id != $this->input->post('invoice_status_id')){
+                    $statuses = $this->query_as_object("SELECT * FROM `mcb_invoice_statuses` WHERE `invoice_status_id`= {$this->input->post('invoice_status_id')}");
+                    $history_msg = "Status Has Been Changed To {$statuses[0]->invoice_status}";
+                }
             }
         } else {
             $db_array['smart_status'] = '0';
@@ -789,11 +1031,14 @@ class Mdl_Invoices extends MY_Model {
 
         $this->save_invoice_db_array($invoice_id, $db_array);
 
-        $this->save_invoice_history($invoice_id, $this->session->userdata('user_id'), $this->lang->line('saved_invoice_options'));
+        $this->save_invoice_history($invoice_id, $this->session->userdata('user_id'), $history_msg);
 
 
         //updating the project specifier value
         $this->updateProjectSpecifier();
+
+        $this->load->model('inventory/mdl_inventory_item');
+        $this->mdl_inventory_item->maintain_group_product_quantity($invoice_id, true);
 
         $this->session->set_flashdata('custom_success', $this->lang->line('invoice_options_saved'));
     }
@@ -856,14 +1101,350 @@ class Mdl_Invoices extends MY_Model {
 
         return $price;
     }
+    
+    public function update_invoice_item($invoice_id, $item) {
+        //error_reporting(E_ALL); ini_set('display_errors', 1);
+        $js_msg = 'undefined';
+        $post_item = $item;
+        $this->product_line = $item;
+        /*
+         * 31-AUG-2011
+         * See if the item_name has changed. If so, then do a lookup
+         * of the description and price against the product table 
+         * 
+         */
+        $invoice_item_id = $item->invoice_item_id;
+        $this->db->where('invoice_item_id', $invoice_item_id);
+        $old_item = $this->db->get('mcb_invoice_items')->row();
+        $product_id = $item->product_id;
+        
+        $product_check = $this->get_row('mcb_products', array('product_id' => $product_id));
+        if (($product_check->is_arichved == '1') && ($product_id > 0)) {
+            if (($item->item_qty != "") && ($item->item_qty != '0')) {
+                $this->update_invoice_amounts($invoice_id);
+                //return $this->get_invoice_item($invoice_item_id);
+                $arr = array(
+                    'status' => FALSE,
+                    'l_data' => $this->get_invoice_item($invoice_item_id)
+                );
+                return $arr;
+            }
+        }
+        
+        $invoice_detail = $this->get_row('mcb_invoices', array('invoice_id'=>$invoice_id));
+        
+//        echo '<pre>';
+//        print_r($invoice_detail);
+//        die;
+        
+        $new_name = $item->item_name;
+        $new_description = $item->item_description;
+        if ($old_item->item_name !== $new_name) {
+            if ($new_name !== '') {
+                $this->load->model('products/mdl_products');
+                //$product = $this->mdl_products->get_product_by_name($new_name);
+                $product = $this->get_row('mcb_products', array('product_name' => span_to_mm($new_name), 'is_arichved !=' => '1'));
+                
+//                echo '<pre>';
+//                print_r($product);
+//                die;
+                
+                if ($product != NULL) {
+                    //log_message('INFO', 'Found product '.$product->product_name.' '.$product->product_description);
+                    $new_description = $product->product_description;
+                    $product_id = $product->product_id;
+                    $item->product_id = $product->product_id;
+                    $item->original_name = $product->product_name;
+                    $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
+                    $item->product_dynamic = $product->product_dynamic;
+                    $msg = 'Name change for invoice item ' . $invoice_item_id . '(' . $old_item->item_name . ' -> ' . $new_name . ')';
 
+                    $db_inc_his = array(
+                        'invoice_id' => $invoice_id,
+                        'invoice_history_date' => time(),
+                        'invoice_history_data' => $msg,
+                        'user_id' => $this->session->userdata('user_id')
+                    );
+                    $this->db->insert('mcb_invoice_history', $db_inc_his);
+                    if ($item->product_dynamic == '1') {
+                        $item->item_per_meter = $item->item_price;
+                    }
+                } else {
+                    $product_id = '0';
+                    $item->product_id = '0';
+                    if(($item->product_id == '0') ){
+                        $item->original_name = span_to_mm($item->item_name);
+                    }
+                    if (( strpos($item->original_name, '{mm}') !== FALSE)) {
+                        $item->product_dynamic = 1;
+                    }else{
+                        $item->product_dynamic = 0;
+                    }
+                }
+            }
+            if( $item->product_dynamic != '1' ){
+                $item->item_per_meter = "";
+                $item->item_length = "";
+            }
+        }
+        if( $item->product_id == '0' ){
+            //$item->product_dynamic = '1';
+            if(($item->product_dynamic == '1') && ($item->item_length == '') ){
+                $item->item_length = '1';
+                if($item->item_price != '0.00'){
+                    $item->item_per_meter = $item->item_price;
+                    if( $item->item_per_meter < '0.00' ){
+                        $item->item_per_meter = 1;
+                    }
+                }
+                if($item->item_per_meter == '0.00'){
+                    $item->item_per_meter = 1;
+                }
+            }
+        }
+//        echo '<pre>';
+//        print_r($item);exit;
+        //log_message('INFO', 'update invoice item ' . $invoice_item_id . ' (product_id:' . $product_id . ')');
+
+        if ((float) $item->product_dynamic > 0) {
+            if ((($item->product_dynamic) == '1') && (trim($item->item_length) == '') && (trim($item->item_length) != '-1')) {
+                $item->item_per_meter = $item->item_price;
+                $item->item_length = '1';
+            } else if ((($item->product_dynamic) == '1') && (trim($item->item_length) != '') && (trim($item->item_length) != '-1')) {
+                $item->item_price = $item->item_per_meter * $item->item_length;
+            } else if($item->product_dynamic == '1' && trim($item->item_length) == '-1'){
+                //$item->item_per_meter = $item->item_price;
+                $item->item_price = $item->item_per_meter;
+                $item->item_length = '-1';
+            }else {
+                $item->item_per_meter = '0.00';
+                $item->item_length = '';
+            }
+        }
+        
+        if (($item->item_length != '' && $item->item_length != '-1') && ($item->item_per_meter != '0.00')) {
+            $item->item_price = ($item->item_length) * ($item->item_per_meter);
+        }
+        if (($item->item_length != '') && (strpos($new_name, '{mm}'))) {
+            $new_name = mm_to_span($new_name, $item->item_length, 1000);
+        }
+        
+        if (($item->item_length != '') && (strpos($new_description, '{mm}'))) {
+            $new_description = mm_to_span($new_description, $item->item_length, 1000);
+        }
+        
+        if ($item->item_length != '') {
+            $new_name = span_to_mm($new_name, $item->item_length, 1000);
+            $new_name = mm_to_span($new_name, $item->item_length, 1000);
+            
+            $new_description = span_to_mm($new_description, $item->item_length, 1000);
+            $new_description = mm_to_span($new_description, $item->item_length, 1000);
+        }
+        
+        if($item->item_qty == '-1'){
+            if(strpos($new_description, 'Subtotal') !== FALSE){
+                $new_description = $new_description;
+            }else{
+                $new_description = 'Subtotal:';
+            }
+        }
+//        echo '<pre>';
+//        print_r($item);
+//        die;
+        if($item->item_qty == '-1'){
+            $new_name = '';
+            $new_description = $new_description;
+            $item->item_length = '';
+            $item->item_type = '';
+            $item->item_per_meter = '';
+            $item->product_dynamic = '0';
+            $item->item_price = '';
+            $product_id = 0;
+            $item->original_name = '';
+        }
+        
+        //echo '...'.$new_description; exit;
+//        var_dump($item);
+//        echo "ggg";
+//        die;
+        // ------- to make row clean--------------
+        if (($item->item_qty == "") && ($item->item_qty != '0')) {
+            $item->item_qty = floatval('');
+            $item->item_type = '';
+            $new_name = '';
+            $new_description = '';
+            $item->item_per_meter = floatval('');
+            $item->item_length = '';
+            $item->item_price = floatval('');
+            $item->original_name = '';
+            $product_id = '';
+            $item->product_dynamic = 0;
+        }
+        
+        //echo $new_description; exit;
+
+        $db_set = array(
+            'item_type' => $item->item_type,
+            'item_qty' => floatval( $item->item_qty ),
+            'item_name' => $new_name,
+            'original_name' => $item->original_name,
+            'item_description' => $new_description,
+            'item_length' => $item->item_length,
+            'item_per_meter' => floatval( $item->item_per_meter ),
+            'item_price' => floatval( $item->item_price ),
+            'product_id' => intval($product_id),
+        );
+        
+        $this->db->where('invoice_item_id', $invoice_item_id);
+        $this->db->set($db_set);
+        
+        if($db_set['item_qty'] < '-1' && $db_set['item_qty'] != ""){
+            $js_msg = 'Enter The Valid Quantity.';
+            $r = FALSE;
+        }elseif ( ($item->product_dynamic) == '1' && ($db_set['item_length'] < '-1' || $db_set['item_length'] == '0' || $db_set['item_length'] == '' )  ) {
+            $js_msg = 'Enter The Valid Product Length.';
+            $r = FALSE;
+        } else {
+            $r = $this->db->update('mcb_invoice_items');
+        }
+        
+        
+        //update stock 
+        //****pending inv*****
+        $stock_update_where = array(
+            'qty_update_source'=>'add-quote',
+            'relevent_item_field'=>'invoice_item_id',
+            'relevent_item_id'=>$invoice_item_id
+        );
+//        if( !isset($item->inventory_count) ){
+//            $stock_update_where['qty_update_source'] = 'add-invoice';
+//        }
+//        $condition = $this->common_model->get_row('mcb_item_stock', $stock_update_where);
+//        if( $condition != NULL ){
+//            $this->common_model->update('mcb_item_stock', array('qty_pending'=>$db_set['item_qty']), $stock_update_where);
+//        }else{
+//            $stock_update_where['qty_pending'] = $db_set['item_qty'];
+//            $this->common_model->insert('mcb_item_stock', $stock_update_where);
+//        }
+//        //****pending inv*****
+        $products_inventory1 = $this->get_Where('mcb_products_inventory',array('product_id'=>$item->product_id));
+        $stock_delete_where = array(
+            'qty_update_source'=>'add-invoice',
+            'relevent_item_field'=>'invoice_item_id',
+            'relevent_item_id'=>$invoice_item_id,
+        );
+        if( $invoice_detail->invoice_is_quote == '1' ){
+            $stock_delete_where['qty_update_source'] = 'add-quote';
+        }
+        
+        $has_stock = $this->get_Where('mcb_item_stock',$stock_delete_where);
+        $this->common_model->delete('mcb_item_stock', $stock_delete_where);
+        if( $products_inventory1 != NULL ){
+            foreach ($products_inventory1 as $inventory) {
+                
+                $stock_update_where = array(
+                    'qty_update_source'=>'add-invoice',
+                    'relevent_item_field'=>'invoice_item_id',
+                    'relevent_item_id'=>$invoice_item_id,
+                    'inventory_id'=>$inventory['inventory_id'],
+                    'qty_pending'=>$inventory['inventory_qty']*($db_set['item_qty']),
+                );
+                if( $invoice_detail->invoice_is_quote == '1' ){
+                    $stock_update_where['qty_update_source'] = 'add-quote';
+                    if( $has_stock != NULL ){
+                        $this->common_model->insert('mcb_item_stock', $stock_update_where);
+                    }
+                }else{
+                    $this->common_model->insert('mcb_item_stock', $stock_update_where);
+                }
+                
+//                echo '<pre>';
+//                print_r($invoice_detail);
+//                die;
+                
+                
+//                echo $this->db->last_query();
+            }
+        }
+        
+        
+//        echo '<pre>';
+//        print_r($item);
+//        print_r($products_inventory1);
+//        die;
+        
+        
+        
+        
+//        $this->load->model("delivery_dockets/mdl_delivery_dockets");
+//        $products_inventory1 = $this->mdl_delivery_dockets->get_Where('mcb_products_inventory',array('product_id'=>$item->product_id));
+//        //delete it, special case
+//        
+//        foreach ($products_inventory1 as $prodct_inmentry) {
+//            $quqntity = $prodct_inmentry['inventory_qty']*$item->item_qty;
+//            
+//            //cleanout
+//            $this->db->query("delete from mcb_item_stock where inventory_id='".$prodct_inmentry['inventory_id']."' AND "
+//                    . "relevent_item_id='".$invoice_item_id."' AND qty_update_source='add-quote' AND relevent_item_field='invoice_item_id'");
+//            
+//            //add again
+//            $stockArray = array(
+//                'qty_pending'=>$quqntity,
+//                'qty_update_source'=>'add-quote',
+//                'relevent_item_field'=>'invoice_item_id',
+//                'relevent_item_id'=>$invoice_item_id,
+//                'inventory_id'=>$prodct_inmentry['inventory_id'],
+//                 'last_modified_date' => date('Y-m-d H:i:s'), 
+//                'status' => '0', // we will only change this as active if the invoice is created for it or click to order/invoice is clicked
+//                'modified_by'=> $this->session->userdata('user_id')
+//
+//            );
+//            $this->db->insert('mcb_item_stock', $stockArray);
+////            $this->db->query("UPDATE mcb_item_stock SET inventory_id = '".$prodct_inmentry['inventory_id']."',"
+////                    . "last_modified_date='".date('Y-m-d H:i:s')."', modified_by='".$this->session->userdata('user_id')."',"
+////                    . " qty_pending =  $item->item_qty WHERE relevent_item_field='invoice_item_id' AND relevent_item_id = $invoice_item_id");
+//        }
+//        //end ****pending inv*****
+//                
+//        //$this->db->query("UPDATE mcb_item_stock SET inventory_id = $check_product_inventory->inventory_id, qty_pending =  $item->item_qty WHERE relevent_item_field='invoice_id' AND relevent_item_id = $invoice_id");
+        
+        
+        if ($r == TRUE) {
+            if (($invoice_item_id > 0) && ($new_name != "")) {
+                $check_invoice = $this->get_row('mcb_invoices', array('invoice_id' => $invoice_id));
+                
+                $db_inc_his = array(
+                    'invoice_id' => $invoice_id,
+                    'invoice_history_date' => time(),
+                    'invoice_history_data' => $new_name . ' Updated.',
+                    'user_id' => $this->session->userdata('user_id')
+                );
+                $this->db->insert('mcb_invoice_history', $db_inc_his);
+            }
+            $this->update_invoice_amounts($invoice_id);
+            $arr = array(
+                'status' => TRUE,
+                'l_data' => $this->get_invoice_item($invoice_item_id)
+            );
+            return $arr;
+        } else {
+            $this->common_model->get_row('mcb_invoice_items', array('invoice_item_id'=>$item->invoice_item_id));
+            $arr = array(
+                'status' => FALSE,
+                'l_data' => $this->get_invoice_item($invoice_item_id),
+                'js_msg' => $js_msg
+            );
+            return $arr;
+        }
+    }
+    
     function add_new_invoice_item($item) {
-
+//        error_reporting(E_ALL); ini_set('display_errors', 1);
         if (!$item->product_id > 0) {
-
             if ($item->item_name !== '') {
                 $this->load->model('products/mdl_products');
                 // $product = $this->mdl_products->get_product_by_name($item_name);
+                $item->item_name = span_to_mm($item->item_name);
                 $product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
                 if (isset($product)) {
                     $item->item_description = $product->product_description;
@@ -884,10 +1465,12 @@ class Mdl_Invoices extends MY_Model {
                 }
                 if (strpos($item->item_name, '{mm}') !== FALSE) {
                     $item->item_length = '1';
+                    $item->product_dynamic = '1';
                 }
             }
             //get_product_by_name
         }
+
         $db_array = array(
             'invoice_id' => $item->invoice_id,
             'product_id' => $item->product_id,
@@ -898,7 +1481,7 @@ class Mdl_Invoices extends MY_Model {
             'item_per_meter' => $item->item_per_meter,
             'item_qty' => $item->item_qty,
             'item_price' => $item->item_price,
-            'item_index' => $item->item_index,
+            'item_index' => intval( $item->item_index ),
             'item_date' => time()
         );
         
@@ -906,7 +1489,8 @@ class Mdl_Invoices extends MY_Model {
             $db_array['item_description'] = 'Subtotal:';
         }
         
-        $check_product = $this->get_row('mcb_products', array('product_name' => $item->item_name, 'is_arichved !=' => '1'));
+        $check_product_inventory = $this->get_row('mcb_products_inventory', array('product_id' => $item->product_id));
+        
         if ($this->db->insert('mcb_invoice_items', $db_array)) {
             //$this->db->insert('mcb_invoice_items', $db_array);
             $invoice_item_id = $this->db->insert_id();
@@ -924,6 +1508,31 @@ class Mdl_Invoices extends MY_Model {
                 );
                 $this->db->insert('mcb_invoice_history', $db_inc_his);
 //               } 
+                
+                //****pending inv***** not needed
+                $products_inventory1 = $this->get_Where('mcb_products_inventory',array('product_id'=>$item->product_id));
+                foreach ($products_inventory1 as $prodct_inmentry) {
+                    $quqntity = $prodct_inmentry['inventory_qty']*$item->item_qty;
+                    
+                    $stockArray = array(
+                        'qty_pending'=>$quqntity,
+                        'qty_update_source'=>'add-invoice',
+                        'relevent_item_field'=>'invoice_item_id',
+                        'relevent_item_id'=>$invoice_item_id,
+                        'inventory_id'=>$prodct_inmentry['inventory_id'],
+                        'last_modified_date' => date('Y-m-d H:i:s'), 
+                        'modified_by'=> $this->session->userdata('user_id')
+
+                    );
+                    
+                    if( $check_invoice->invoice_is_quote == '1' ){
+                        $stockArray['qty_update_source'] ='add-quote'; 
+                    }else{
+                        $this->db->insert('mcb_item_stock', $stockArray);
+                    }
+                }
+                //end ****pending inv*****
+                
             }
             $item = $this->get_invoice_item($invoice_item_id);
             return $item;
@@ -939,7 +1548,6 @@ class Mdl_Invoices extends MY_Model {
          * 
          */
         if (!$product_id > 0) {
-
             if ($item_name !== '') {
                 $this->load->model('products/mdl_products');
                 // $product = $this->mdl_products->get_product_by_name($item_name);
@@ -988,247 +1596,19 @@ class Mdl_Invoices extends MY_Model {
 
         $this->mdl_invoice_amounts->adjust($invoice_id);
     }
-
-    public function update_invoice_item($invoice_id, $item) {
-        $js_msg = 'undefined';
-        $post_item = $item;
-        $this->product_line = $item;
-        /*
-         * 31-AUG-2011
-         * See if the item_name has changed. If so, then do a lookup
-         * of the description and price against the product table 
-         * 
-         */
-        $invoice_item_id = $item->invoice_item_id;
-        $this->db->where('invoice_item_id', $invoice_item_id);
-        $old_item = $this->db->get('mcb_invoice_items')->row();
-        $product_id = $item->product_id;
-
-        //echo $product_id;
-        
-        $product_check = $this->get_row('mcb_products', array('product_id' => $product_id));
-
-        if (($product_check->is_arichved == '1') && ($product_id > 0)) {
-            if (($item->item_qty != "") && ($item->item_qty != '0')) {
-                $this->update_invoice_amounts($invoice_id);
-                //return $this->get_invoice_item($invoice_item_id);
-                $arr = array(
-                    'status' => FALSE,
-                    'l_data' => $this->get_invoice_item($invoice_item_id)
-                );
-                return $arr;
-            }
-        }
-//        if (($item->item_qty != "") && ($item->item_qty != '0') && $item->item_length == '') {
-//            $item->item_length = 1;
-//        }
-
-        $new_name = $item->item_name;
-        
-        $new_description = $item->item_description;
-        
-        
-        if ($old_item->item_name !== $new_name) {
-            if ($new_name !== '') {
-                $this->load->model('products/mdl_products');
-                //$product = $this->mdl_products->get_product_by_name($new_name);
-                $product = $this->get_row('mcb_products', array('product_name' => span_to_mm($new_name), 'is_arichved !=' => '1'));
-//                echo '<pre>';
-//                print_r($product);
-//                exit();
-                if ($product != NULL) {
-                    //log_message('INFO', 'Found product '.$product->product_name.' '.$product->product_description);
-                    $new_description = $product->product_description;
-                    $product_id = $product->product_id;
-                    $item->product_id = $product->product_id;
-                    $item->original_name = $product->product_name;
-                    $item->item_price = $this->discount_client_invoice_price($invoice_id, $product->product_base_price);
-                    $item->product_dynamic = $product->product_dynamic;
-                    $msg = 'Name change for invoice item ' . $invoice_item_id . '(' . $old_item->item_name . ' -> ' . $new_name . ')';
-
-                    $db_inc_his = array(
-                        'invoice_id' => $invoice_id,
-                        'invoice_history_date' => time(),
-                        'invoice_history_data' => $msg,
-                        'user_id' => $this->session->userdata('user_id')
-                    );
-                    $this->db->insert('mcb_invoice_history', $db_inc_his);
-
-
-                    if ($item->product_dynamic == '1') {
-                        $item->item_per_meter = $item->item_price;
-                    }
-                } else {
-                    $product_id = '0';
-                    $item->product_id = '0';
-                }
-            }
-        }
-
-        
-//        echo '<pre>';
-//        print_r($item);exit;
-        //log_message('INFO', 'update invoice item ' . $invoice_item_id . ' (product_id:' . $product_id . ')');
-
-        if ((float) $item->product_id > 0) {
-            if ((($item->product_dynamic) == '1') && (trim($item->item_length) == '') && (trim($item->item_length) != '-1')) {
-                $item->item_per_meter = $item->item_price;
-                $item->item_length = '1';
-            } else if ((($item->product_dynamic) == '1') && (trim($item->item_length) != '') && (trim($item->item_length) != '-1')) {
-                $item->item_price = $item->item_per_meter * $item->item_length;
-            } else if($item->product_dynamic == '1' && trim($item->item_length) == '-1'){
-                //$item->item_per_meter = $item->item_price;
-                $item->item_price = $item->item_per_meter;
-                $item->item_length = '-1';
-            }else {
-                $item->item_per_meter = '';
-                $item->item_length = '';
-            }
-        }
-        
-        if (($item->item_length != '' && $item->item_length != '-1') && ($item->item_per_meter != '0.00')) {
-            $item->item_price = ($item->item_length) * ($item->item_per_meter);
-        }
-        if (($item->item_length != '') && (strpos($new_name, '{mm}'))) {
-            $new_name = mm_to_span($new_name, $item->item_length, 1000);
-        }
-        
-        if (($item->item_length != '') && (strpos($new_description, '{mm}'))) {
-            $new_description = mm_to_span($new_description, $item->item_length, 1000);
-        }
-        
-        if ($item->item_length != '') {
-            $new_name = span_to_mm($new_name, $item->item_length, 1000);
-            $new_name = mm_to_span($new_name, $item->item_length, 1000);
-            
-            $new_description = span_to_mm($new_description, $item->item_length, 1000);
-            $new_description = mm_to_span($new_description, $item->item_length, 1000);
-        }
-        
-        if($item->item_qty == '-1'){
-            if(strpos($new_description, 'Subtotal') !== FALSE){
-                $new_description = $new_description;
-            }else{
-                $new_description = 'Subtotal:';
-            }
-        }
-//        echo '<pre>';
-//        print_r($new_description);
-//        die;
-        if($item->item_qty == '-1'){
-            $new_name = '';
-            $new_description = $new_description;
-            $item->item_length = '';
-            $item->item_type = '';
-            $item->item_per_meter = '';
-            $item->product_dynamic = '0';
-            $item->item_price = '';
-            $product_id = 0;
-            $item->original_name = '';
-        }
-        
-        //echo '...'.$new_description; exit;
-//        var_dump($item);
-//        echo "ggg";
-//        die;
-        // ------- to make row clean--------------
-        if (($item->item_qty == "") && ($item->item_qty != '0')) {
-            $item->item_qty = '';
-            $item->item_type = '';
-            $new_name = '';
-            $new_description = '';
-            $item->item_per_meter = '';
-            $item->item_length = '';
-            $item->item_price = '';
-            $item->original_name = '';
-            $product_id = '';
-            $item->product_dynamic = 0;
-        }
-        
-        //echo $new_description; exit;
-
-        $db_set = array(
-            'item_type' => $item->item_type,
-            'item_qty' => $item->item_qty,
-            'item_name' => $new_name,
-            'original_name' => $item->original_name,
-            'item_description' => $new_description,
-            'item_length' => $item->item_length,
-            'item_per_meter' => $item->item_per_meter,
-            'item_price' => $item->item_price,
-            'product_id' => $product_id,
-        );
-        
-        $this->db->where('invoice_item_id', $invoice_item_id);
-        $this->db->set($db_set);
-
-
-
-//        if(($db_set['item_qty'] == '0' && $db_set['product_id'] == '0' )){
-//            $r = $this->db->update('mcb_invoice_items');
-//        }elseif (($db_set['item_qty'] >= '0' && $db_set['product_id'] != '0' )){
-//            $r = $this->db->update('mcb_invoice_items');
-//        }elseif (($item->item_qty == "") && ($item->item_qty != '0') ){
-//            $r = $this->db->update('mcb_invoice_items');
-//        }elseif (($db_set['item_qty'] < '0' && $db_set['product_id'] != '0' )){
-//            $r = $this->db->update('mcb_invoice_items');
-//        }elseif (($db_set['item_qty'] < '0' && $db_set['product_id'] == '0' && $db_set['item_name'] == '' && $db_set['item_price'] == '0.00' )){
-//            $r = $this->db->update('mcb_invoice_items');
-//        } else{
-//            $r = FALSE;
-//        }   
-        
-        if($db_set['item_qty'] < '-1' && $db_set['item_qty'] != ""){
-            $js_msg = 'Enter The Valid Quantity.';
-            $r = FALSE;
-        }elseif ( ($item->product_dynamic) == '1' && ($db_set['item_length'] < '-1' || $db_set['item_length'] == '0' || $db_set['item_length'] == '' )  ) {
-            $js_msg = 'Enter The Valid Product Length.';
-            $r = FALSE;
-        } else {
-            $r = $this->db->update('mcb_invoice_items');
-        }
-        
-        if ($r == TRUE) {
-            if (($invoice_item_id > 0) && ($new_name != "")) {
-                $check_invoice = $this->get_row('mcb_invoices', array('invoice_id' => $invoice_id));
-//               if($check_invoice->invoice_is_quote == '0'){
-                
-                $db_inc_his = array(
-                    'invoice_id' => $invoice_id,
-                    'invoice_history_date' => time(),
-                    'invoice_history_data' => $new_name . ' Updated.',
-                    'user_id' => $this->session->userdata('user_id')
-                );
-                $this->db->insert('mcb_invoice_history', $db_inc_his);
-//               } 
-            }
-            $this->update_invoice_amounts($invoice_id);
-            // return $this->get_invoice_item($invoice_item_id);
-            $arr = array(
-                'status' => TRUE,
-                'l_data' => $this->get_invoice_item($invoice_item_id)
-            );
-            return $arr;
-        } else {
-            $this->common_model->get_row('mcb_invoice_items', array('invoice_item_id'=>$item->invoice_item_id));
-//            $this->update_invoice_amounts($invoice_id);
-            //return $this->get_invoice_item($invoice_item_id);
-            $arr = array(
-                'status' => FALSE,
-                'l_data' => $this->get_invoice_item($invoice_item_id),
-                'js_msg' => $js_msg
-            );
-            return $arr;
-        }
-    }
-
+    
     public function delete_invoice_item($invoice_id, $invoice_item_id) {
+
 
         $this->db->where('invoice_item_id', $invoice_item_id);
         $this->db->delete('mcb_invoice_items');
         $this->db->where('invoice_item_id', $invoice_item_id);
         $this->db->delete('mcb_invoice_item_amounts');
         $this->update_invoice_amounts($invoice_id);
+        
+        //****pending inv*****
+        // delete from mcb_item_stock
+        $this->db->query("update mcb_item_stock set status='0', last_modified_date='".date('Y-m-d H:i:s')."', modified_by='".$this->session->userdata('user_id')."' where relevent_item_id='".$invoice_item_id."' AND relevent_item_field='invoice_item_id' AND qty_update_source='add-quote'");
     }
 
     public function set_invoice_items_sort_order($invoice_id, $sort_order) {
@@ -1317,7 +1697,7 @@ class Mdl_Invoices extends MY_Model {
         $query = $this->db->get($this->table_name);
 
         $db_array = $query->row_array();
-
+        
         $invoice_is_quote = $db_array['invoice_is_quote'];
         $db_array['invoice_is_quote'] = $create_new_quote;
         $db_array['invoice_quote_id'] = $db_array['invoice_id'];
@@ -1335,11 +1715,12 @@ class Mdl_Invoices extends MY_Model {
             //unset($db_array['client_id']);
             unset($db_array['contact_id']);
             unset($db_array['invoice_notes']);
+            unset($db_array['invoice_date_emailed']);
         }
 
         $db_array['invoice_date_entered'] = strtotime(standardize_date($invoice_date_entered));
         $db_array['invoice_due_date'] = $this->calculate_due_date($db_array['invoice_date_entered'], $create_new_quote);
-
+        // echo "<pre>";print_r($db_array);die;
         $this->db->insert($this->table_name, $db_array);
 
         $new_invoice_id = $this->db->insert_id();
@@ -1368,9 +1749,44 @@ class Mdl_Invoices extends MY_Model {
              WHERE invoice_id = ?" . $where;
 
         $this->db->query($sql, array($new_invoice_id, $invoice_id));
-
+        
+//        if($create_new_quote == '1'){
+//            // pending is updated here
+//                //****pending inv*****
+//            //getting all invoice items of an invoice
+//            $old_invoice_items = $this->getInvoiceItems($invoice_id);
+//            $new_invoice_items = $this->getInvoiceItems($new_invoice_id);
+//            if (sizeof($new_invoice_items) > 0) {
+//                foreach ($new_invoice_items as $new_invoice_item) {
+//                    $this->load->model("delivery_dockets/mdl_delivery_dockets");
+//                    $products_inventory1 = $this->mdl_delivery_dockets->get_Where('mcb_products_inventory',array('product_id'=>$new_invoice_item->product_id));
+//                    foreach ($products_inventory1 as $prodct_inmentry) {
+//                        $quqntity = $prodct_inmentry['inventory_qty']*$new_invoice_item->item_qty;
+//                        $sql = "insert into mcb_item_stock (inventory_id, qty_update_source, relevent_item_field,relevent_item_id, qty_pending, modified_by, status) values ('"
+//                            . "" . $prodct_inmentry['inventory_id'] . "', 'add-quote', 'invoice_item_id','" . $new_invoice_item->invoice_item_id . "', '" . $quqntity . "','" . $this->session->userdata('user_id') . "','0')";
+//                        $this->db->query($sql);
+//                    }
+//
+//
+//
+//    //            $sql = "
+//    //                            INSERT
+//    //                  INTO mcb_item_stock (inventory_id, qty_update_source, relevent_item_field, relevent_item_id, qty_pending, status, modified_by)
+//    //                SELECT inventory_id, qty_update_source, relevent_item_field, ?, qty_pending, status,?
+//    //                  FROM mcb_item_stock
+//    //                 WHERE relevent_item_id = ? AND qty_update_source='add-quote' AND relevent_item_field='invoice_item_id'";
+//    //
+//    //            $this->db->query($sql, array($new_inv_item->invoice_item_id, $this->session->userdata('user_id'), $old_invoice_item->invoice_item_id));
+//                }
+//            }
+//        }
+        
+        
+// end //****pending inv*****
+        
         $this->update_invoice_amounts($new_invoice_id);
         return $new_invoice_id;
+
 
         //$this->session->set_flashdata('custom_success', 'Quote copied successfully.<br/>');
         if ($redirect) {
@@ -1378,6 +1794,11 @@ class Mdl_Invoices extends MY_Model {
         } else {
             return TRUE;
         }
+    }
+    
+    public function getInvoiceItems($invoice_id){
+        $q = $this->db->query("select * from mcb_invoice_items where invoice_id = '".$invoice_id."'");
+        return $q->result();
     }
 
     public function delete_invoice_file($filename) {
@@ -1478,6 +1899,13 @@ class Mdl_Invoices extends MY_Model {
         $item->id = $invoice_item_id;
         if ($item->product_id == '0') {
             $item->is_removed = '1';
+            
+            if (( strpos($item->original_name, '{mm}') !== FALSE)) {
+                $item->product_dynamic = 1;
+            }else{
+                $item->product_dynamic = 0;
+            }
+            
         }
         return $item;
     }
@@ -1576,7 +2004,7 @@ class Mdl_Invoices extends MY_Model {
                 }
             }elseif($item->inventory_count > 1){
                 $lesserQtyInventory = 999999999999999;
-                $sql2 = "SELECT pi.inventory_id, ii.qty AS s_qty, pi.inventory_qty AS s_s_inventory_qty "
+                $sql2 = "SELECT pi.inventory_id, ii.qty AS s_qty, pi.inventory_qty AS s_inventory_qty "
                         . "FROM mcb_products_inventory as pi "
                         . "INNER JOIN mcb_inventory_item as ii ON ii.inventory_id = pi.inventory_id "
                         . "WHERE pi.product_id = '".$item->product_id."' AND pi.inventory_id != '0'";
@@ -1594,7 +2022,7 @@ class Mdl_Invoices extends MY_Model {
             $lesserQtyInventory = 0;
         }
         $stkqty = ((float) $lesserQtyInventory > 0 && $lesserQtyInventory != '999999999999999') ? floor($lesserQtyInventory) : '0';
-        return '<div id="new" class="open-popup" style="text-align:center;" value="'.$item->product_id.'" itemname="'.$item->item_name.'">'.$stkqty.'</div>';
+        return '<div id="new" class="open-popup" style="text-align:center;" value="'.$item->product_id.'" itemname="'.$item->item_name.'"><a href="javascript:void(0)">'.$stkqty.'</a></div>';
     }
     
     public function get_invoice_items($invoice_id) {
@@ -1606,7 +2034,7 @@ class Mdl_Invoices extends MY_Model {
                 . "FROM (mcb_invoice_items) "
                 . "INNER JOIN mcb_invoice_item_amounts ON mcb_invoice_item_amounts.invoice_item_id = mcb_invoice_items.invoice_item_id "
                 . "left join mcb_inventory_item as mii on (mii.inventory_id = mcb_invoice_items.product_id AND mii.is_arichved != '1') "
-                . "left join mcb_products as pro on (pro.product_name = mcb_invoice_items.original_name AND mii.is_arichved != '1') "
+                . "left join mcb_products as pro on (pro.product_name = mcb_invoice_items.original_name) "
                 . "left join mcb_products_inventory as pi on (mcb_invoice_items.product_id = pi.product_id) "
                 . "left join mcb_inventory_item as i_itm on (i_itm.inventory_id = pi.inventory_id) "
                 . "WHERE `mcb_invoice_items`.`invoice_id` = '" . $invoice_id . "' "
@@ -1614,6 +2042,11 @@ class Mdl_Invoices extends MY_Model {
                 . "ORDER BY item_index, mcb_invoice_items.invoice_item_id, item_index, mcb_invoice_items.invoice_item_id";
         $q = $this->db->query($sql);
         $items = $q->result();
+        
+//        echo '<pre>';
+//        print_r($items);
+//        die;
+        
         $fin = array();
         if (sizeof($items) > 0) {
             foreach ($items as $item) {
@@ -1632,12 +2065,22 @@ class Mdl_Invoices extends MY_Model {
                         $item->is_removed = 1;
                         $item->is_archived = 1;
                     }
-                    //if ($pd->is_removed == '1') {
-                    //    $item->is_removed = 1;
-                    //}
+                    //----- update product id-------
+                    if($item->product_id != $item->p_product_id){
+                        //$this->common_model->just_query("UPDATE mcb_invoice_items SET product_id = '{$item->p_product_id}' WHERE mcb_invoice_items.invoice_item_id = {$item->invoice_item_id};");
+                        $item->product_id = $item->p_product_id;
+                    }
                 } else {
-                    $item->product_dynamic = '0';
+                    //$item->product_dynamic = '0';
                     $item->is_removed = 1;
+                    //----- latter it must be update on db too-------
+                    $item->product_id = '0';
+                    
+                    if (( strpos($item->original_name, '{mm}') !== FALSE)) {
+                        $item->product_dynamic = 1;
+                    }else{
+                        $item->product_dynamic = 0;
+                    }
                 }
                 // $item->stock_status = $this->getStockStatus($item);
                 $item->stock_status = $this->get_quote_stock_status($item);
@@ -1645,9 +2088,9 @@ class Mdl_Invoices extends MY_Model {
                 $fin[] = $item;
             }
         }
-        //echo "<pre>";
-        //print_r($fin); 
-        //exit;
+//        echo "<pre>";
+//        print_r($fin); 
+//        exit;
         return $fin;
     }
 
@@ -1672,6 +2115,16 @@ class Mdl_Invoices extends MY_Model {
         return $invoice_amounts;
     }
 
+    public function get_invoice_amounts_to_download($invoice_id) {
+        $this->db->where('invoice_id', $invoice_id);
+        $this->db->select('invoice_item_subtotal, invoice_item_tax, invoice_total');
+        $invoice_amounts = $this->db->get('mcb_invoice_amounts')->row();
+        $invoice_amounts->invoice_item_subtotal = display_currency($invoice_amounts->invoice_item_subtotal);
+        $invoice_amounts->invoice_item_tax = display_currency($invoice_amounts->invoice_item_tax);
+        $invoice_amounts->invoice_total = display_currency($invoice_amounts->invoice_total);
+        return $invoice_amounts;
+    }
+    
     public function get_invoice_payments($invoice_id) {
 
         $this->load->model('payments/mdl_payments');
@@ -1752,13 +2205,11 @@ class Mdl_Invoices extends MY_Model {
     }
 
     function invoice_paid_amount($invoice_id) {
-
         $amount = '0';
         $docData1 = $this->get_all('mcb_delivery_dockets', array('invoice_id' => $invoice_id));
         if (($docData1 != NULL)) {
-
             foreach ($docData1 as $docket) {
-                $qry = "SELECT SUM(amount_entered) AS paid_amount FROM mcb_delivery_docket_payment WHERE docket_id = '" . $docket->docket_id . "'";
+                $qry = "SELECT SUM(amount_entered) AS paid_amount FROM mcb_delivery_docket_payment WHERE docket_id = '{$docket->docket_id}'";
                 $amount += $this->query_as_object($qry)[0]->paid_amount;
             }
         }
@@ -1768,13 +2219,14 @@ class Mdl_Invoices extends MY_Model {
     function getInvoiceStatusId($invoice_id) {
         $invoiceDetail = $this->get_row('mcb_invoices', array('invoice_id' => $invoice_id));
         $status_Id = $invoiceDetail->invoice_status_id;
-
-        if ($invoiceDetail->smart_status == '1') {
+        
+        /// if date is less then 2020
+        if( ($invoiceDetail->invoice_date_entered) <= '1577836800' ){
+            $status_Id = '3'; //Closed
             return $status_Id;
         }
-
+        
         $docData1 = $this->get_all('mcb_delivery_dockets', array('invoice_id' => $invoice_id));
-
         if (($docData1 != NULL)) {
             $invoice_sent_count = 0;
             $invoice_paid_count = 0;
@@ -1782,12 +2234,9 @@ class Mdl_Invoices extends MY_Model {
                 $invoice_sent_count += $dd->invoice_sent;
                 $invoice_paid_count += $dd->paid_status;
             }
-        }
-
-        // if(($docData1 != NULL) && ($status_Id != '3') ){
-        if (($invoice_sent_count > '0') || ($invoice_paid_count > '0')) {
-
+            
             $current_date = time();
+            $current_date = strtotime(date("Y-m-d", ($current_date)));
             $delivery_status = 0;
             $invoice_sent = 0;
             $paid_status = 0;
@@ -1801,27 +2250,253 @@ class Mdl_Invoices extends MY_Model {
                     $delivery_status += $dd->docket_delivery_status;
                 }
 
+                $due_date = strtotime(date("Y-m-t", ($dd->docket_due_date)));
                 $paid_status += $dd->paid_status;
-                if ((($current_date - $dd->docket_due_date) > 0) && ( $dd->paid_status != '1' )) {
-                    $overdue += round(($current_date - $dd->docket_due_date) / (60 * 60 * 24));
+
+                if ((($current_date - $due_date) > 0) && ( $dd->paid_status != '1' ) && ( $dd->invoice_sent == '1' )) {
+                    $overdue += round(($current_date - $due_date) / (60 * 60 * 24));
                 }
             }
             if ((count($docData1) == $paid_status) && ($paid_status > '0')) {
-                $res = '3'; //Closed
+                $status_Id = '3'; //Closed
+                return $status_Id;
             } elseif (($overdue > '0')) {
-                $res = '4'; //Overdue
+                $status_Id = '4'; //Overdue
             } elseif (($count > '0') && ($count == $delivery_status) && ($count == $invoice_sent)) {
-                $res = '2'; //Emailed
+                $status_Id = '2'; //Emailed
             } else {
-                $res = '1'; //open
+                $status_Id = '1'; //open
+            }   
+            if ($invoiceDetail->smart_status == '1') {
+                return $invoiceDetail->invoice_status_id;
             }
-            // $this->update('mcb_invoices', array('invoice_status_id'=>$res), array('invoice_id'=>$invoice_id));
-            return $res;
-        } else {
-            return $status_Id;
         }
+        return $status_Id;
     }
+    
+    function get_quote_invoice_items_for_download( $invoice_id ) {
+        $sql = "SELECT mcb_invoice_items.*, mcb_invoice_item_amounts.* "
+                . "FROM (mcb_invoice_items) "
+                . "INNER JOIN mcb_invoice_item_amounts ON mcb_invoice_item_amounts.invoice_item_id = mcb_invoice_items.invoice_item_id "
+                . "WHERE `mcb_invoice_items`.`invoice_id` = '{$invoice_id}' "
+                . "GROUP BY mcb_invoice_item_amounts.invoice_item_id "
+                . "ORDER BY item_index, mcb_invoice_items.invoice_item_id, item_index, mcb_invoice_items.invoice_item_id";
+        $q = $this->db->query($sql);
+        $items = $q->result();
+        return $items;
+    }
+    
+    function download_quote_invoice_items( $id, $name, $data ) {
+        
+        $query =    "SELECT mcb_invoices.*, mcb_clients.client_name 
+                    FROM `mcb_invoices` 
+                    LEFT JOIN mcb_clients ON `mcb_invoices`.`client_id` = `mcb_clients`.`client_id` 
+                    WHERE invoice_id='{$id}'";
+        
+        $invoice_detail = $this->db->query( $query )->row();
+        $invoice_numbrer = $id;
+        $client_name = 'deleted';
+        
+        if($invoice_detail->client_name != ''){
+            $client_name = $invoice_detail->client_name;
+        }
+        if($invoice_detail->invoice_number != NULL){
+            $invoice_numbrer = $invoice_detail->invoice_number;
+        }
+        
+        $file_name = "{$name}_{$invoice_numbrer}_{$client_name}.csv";
+        $result = $this->db->query("SELECT * FROM `mcb_invoice_items` WHERE invoice_id='{$id}' ORDER BY `item_index` ASC");
+        $heading = array(
+            'Qty',
+            'Cat. #',
+            'Type',
+            'Description',
+            'Length (MT)',
+            'Per Meter',
+            'Unit Price',
+            'Subtotal'
+        );
+        
+        //generating csv file
+        $delimiter = ',';
+        $enclosure = '"';
+        
+        header('Content-type: text/csv');
+        header('Content-Disposition: attachment; filename="'.$file_name.'"');
+        
+        // do not cache the file
+        header('Pragma: no-cache');
+        header('Expires: 0');
 
+        // create a file pointer connected to the output stream
+        $file = fopen('php://output', 'w');
+
+        fputcsv($file, $heading, $delimiter, $enclosure);
+        foreach ( $data['items'] as $item) {
+            
+            if( ($item->item_qty == '0.00') && ($item->item_name == '') ){
+                $item->item_qty = '';
+            }
+            if( $item->item_per_meter == '0.00' ){
+                $item->item_per_meter = '';
+            }
+            if( $item->item_price == '0.00' ){
+                $item->item_price = '';
+            }else{
+                $item->item_price = display_currency( $item->item_price );
+            }
+            
+            if( $item->item_subtotal == '0.00' ){
+                $item->item_subtotal = '';
+            } else {
+                $item->item_subtotal = display_currency( $item->item_subtotal );
+            }
+            
+            $line = array(
+                ($item->item_qty),
+                (str_replace(array( "<span>", "</span>" ), " ", $item->item_name)),
+                ($item->item_type),
+                (str_replace(array( "\n","<span>", "</span>" ), " ", $item->item_description)),
+                ($item->item_length),
+                ($item->item_per_meter),
+                ($item->item_price),
+                ($item->item_subtotal)
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+        }
+        $line = array(
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
+        );
+        fputcsv($file, $line, $delimiter, $enclosure);
+        $title_count = 0;
+        foreach ($data['invoice_amounts'] as $amount ) {
+            
+            if( $title_count == 0 ){
+                $f_title = 'Subtotal';
+            }elseif( $title_count == 1 ){
+                $f_title = 'Tax';
+            }else{
+                $f_title = 'Total';
+            }
+            $line = array(
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                $f_title,
+                $amount
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+            $title_count++;
+        }
+        
+        $data = array(
+            'invoice_id' => $id,
+            'user_id' => $this->session->userdata('user_id'),
+            'invoice_history_date' => time(),
+            'invoice_history_data' => 'Downloaded '.$file_name,
+        );
+        $this->db->insert('mcb_invoice_history', $data);
+        exit();
+    }
+    
+    
+    function download_all_csv($data_arr) {
+        
+        $heading = array(
+            'Status',
+            '#',
+            'Dockets',
+            'Date',
+            'Client',
+            'State',
+            'Client Po#',
+            'Quote #',
+            'Project',
+            'Specifier',
+            'Total Owing',
+        );
+        
+        $delimiter = ',';
+        $enclosure = '"';
+        header('Content-type: text/csv');
+        header('Content-Disposition: attachment; filename="Invoices.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $file = fopen('php://output', 'w');
+        fputcsv($file, $heading, $delimiter, $enclosure);
+        foreach ( $data_arr as $item) {
+            $line = array(
+                ($item->s),
+                ($item->n),
+                ($item->docket_count),
+                ( date('d/m/Y', $item->e) ),
+                ($item->c),
+                ($item->c_state),
+                ($item->po),
+                ($item->qn),
+                ($item->p),
+                ($item->ps),
+                display_currency( str_replace(',', '', $item->a) ),
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+        }
+        exit();
+    }
+    
+    function download_all_csv_by_custom($data_arr) {
+        $heading = array(
+            'Status',
+            '#',
+            'Dockets',
+            'Date',
+            'Client',
+            'State',
+            'Client Po#',
+            'Quote #',
+            'Project',
+            'Specifier',
+            'Total Amount',
+            'Internal Notes',
+        );
+        
+        $delimiter = ',';
+        $enclosure = '"';
+        header('Content-type: text/csv');
+        header('Content-Disposition: attachment; filename="Invoices.csv"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        $file = fopen('php://output', 'w');
+        fputcsv($file, $heading, $delimiter, $enclosure);
+        foreach ( $data_arr as $item) {
+            $line = array(
+                ($item['s']),
+                ($item['n']),
+                ($item['docket_count']),
+                ( date('d/m/Y', $item['e']) ),
+                ($item['client_name']),
+                ($item['client_state']),
+                ($item['po']),
+                ($item['qn']),
+                ($item['project_name']),
+                ($item['project_specifier']),
+                display_currency( str_replace(',', '', $item['a']) ),
+                ($item['inot']),
+            );
+            fputcsv($file, $line, $delimiter, $enclosure);
+        }
+        exit();
+    }
+    
     public function getQuoteInternalFromInvoiceId($invoice_id) {
         $this->db->select('i.note,i.id,i.created_date,u.username');
         $where = array(
@@ -1918,6 +2593,13 @@ class Mdl_Invoices extends MY_Model {
             return $Res;
         }
         return FALSE;
+    }
+    function get_Where($tbl_name, $id_edt) {
+
+        $this->db->where($id_edt);
+        $q = $this->db->get($tbl_name);
+        $Res = $q->result_array();
+        return $Res;
     }
 
 }
